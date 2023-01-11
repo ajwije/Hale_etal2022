@@ -1,0 +1,7 @@
+"0","random_summary <- random_bed %>%"
+"0","  group_by(TF_family, V4) %>%"
+"0","  summarize('random_matches'=n()) %>%"
+"0","  mutate('mean_bg_matches'=random_matches/nrow(random_bed)) %>%"
+"0","  "
+"0","  ungroup()"
+"2","`summarise()` has grouped output by 'TF_family'. You can override using the `.groups` argument."

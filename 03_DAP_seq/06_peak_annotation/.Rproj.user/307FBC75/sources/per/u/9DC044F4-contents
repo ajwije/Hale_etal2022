@@ -1,0 +1,10 @@
+`20220401_DE_DEseq_norm.(2)` <- read.csv("~/Downloads/20220401_DE_DEseq_norm (2).csv", stringsAsFactors=TRUE)
+
+
+M1_Promoter <- read.csv("M1_Promoter.csv", stringsAsFactors=TRUE)
+
+M4_Promoter <- read.csv("M4_Promoter.csv", stringsAsFactors=TRUE)
+
+P1_Promoter <- read.csv("P1_Promoter.csv", stringsAsFactors=TRUE)
+
+P4_Promoter <- read.csv("P4_Promoter.csv", stringsAsFactors=TRUE)

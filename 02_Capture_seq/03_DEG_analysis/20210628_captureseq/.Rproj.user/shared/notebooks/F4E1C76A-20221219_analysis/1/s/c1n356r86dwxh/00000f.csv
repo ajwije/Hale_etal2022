@@ -1,0 +1,4 @@
+"0","sampleTable <- data.frame(condition = factor(c(rep(""race1"", each =3),"
+"0","                                             rep(""mock"", each = 3), "
+"0","                                    "
+"0","                                             rep(""race25"", each=2))))"

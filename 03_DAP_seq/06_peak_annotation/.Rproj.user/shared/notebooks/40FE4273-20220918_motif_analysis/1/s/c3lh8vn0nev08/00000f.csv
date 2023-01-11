@@ -1,0 +1,5 @@
+"0","motif_geneid <- merge(geneid_cname, motif, by.x = ""V2"", by.y = ""V1"",
+                      all.y = TRUE)
+"
+"2","Error in as.data.frame(y) : object 'motif' not found
+"

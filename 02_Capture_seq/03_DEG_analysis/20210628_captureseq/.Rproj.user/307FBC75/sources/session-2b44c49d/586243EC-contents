@@ -1,0 +1,236 @@
+---
+title: "Capture_seq"
+output: html_document
+Author: Asela Wijeratne
+---
+
+```{r warning=FALSE, cache.comments=FALSE}
+#library(apeglm)
+library(tximport)
+library(DESeq2)
+library("pheatmap")
+library(ggplot2)
+#library(calibrate)
+library("RColorBrewer")
+library(dplyr)
+library(reshape2)
+############################################
+```
+
+###names that you want to import 
+
+```{r}
+files_names <- c("TC_1_1", 
+                 "TC_1_2",
+                 "TC_1_3",
+                 "TC_1_4",
+                 "TC_1_5",
+                 "TC_1_6",
+                 "TC_1_7",
+                 "TC_1_8")
+```
+
+
+###create file path 
+
+```{r}
+files <- file.path("/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210208_captureseq/20210628_data_analysis/03_kalisto_alginment", files_names, "abundance.tsv")
+```
+
+
+###import files into Rstudio using txiport 
+```{r}
+txi.kallisto.tsv <- tximport(files, 
+                             type = "kallisto", 
+                             geneIdCol = "target_id", 
+                             ignoreAfterBar = TRUE, 
+                             txOut=TRUE)
+```
+
+### to look at the first part of the count table 
+
+```{r}
+head(txi.kallisto.tsv$counts, n=10)
+```
+
+
+###sample that describe control and treatment samples 
+
+```{r}
+sampleTable <- data.frame(condition = factor(c(rep("race1", each =3),
+                                             rep("mock", each = 3), 
+                                    
+                                             rep("race25", each=2))))
+```
+
+
+
+###these commands will relabel the raw names of the sampleTable and txi.counts
+
+```{r}
+rownames(sampleTable) <- files_names
+colnames(txi.kallisto.tsv$counts) <- files_names
+```
+
+
+
+###create data object for DESeq function
+```{r}
+dds <- DESeqDataSetFromTximport(txi.kallisto.tsv, sampleTable, ~condition)
+```
+
+
+###perform the DE analysis - statistical analysis will be performed for each gene
+###remove transcript with low counts
+
+```{r}
+dds <- DESeq(dds)
+keep <- rowMeans(counts(dds)) > 20
+
+dds <- dds[keep,]
+```
+
+###get the results fromt the dds and assign it to res variable 
+```{r}
+res <- results(dds)
+```
+
+
+###converting into distance data
+
+```{r}
+vsd <- vst(dds, nsub=nrow(dds), blind=FALSE)
+```
+
+###boxplot to see count distributions
+```{r}
+boxplot(assay(vsd), xlab="", ylab="Log2 counts per million",las=2,main="Normalised Distributions")
+```
+
+###PCA to sample distribution 
+
+```{r}
+plot_data <- plotPCA(vsd,intgroup=c("condition"),returnData=TRUE)
+plot_data <- bind_cols(plot_data, sampleTable)
+
+ggplot(plot_data, aes(x = PC1,y=PC2, col=group,label=name)) + 
+  geom_point() + geom_text(alpha=0.6)
+
+```
+
+###getting normzalized counts
+
+```{r}
+countsdds <- as.data.frame(counts(dds, normalized = TRUE))
+
+```
+##things to do
+
+###update Benchling page:
+https://benchling.com/s/etr-gvRdbigTFbFXCE0KFMUC
+
+###check expression of the control genes
+
+####House keeping genes
+
+```{r}
+house_keeping <- c("
+Glyma.20G141600.1
+Glyma.12G020500.1
+Glyma.12G051100.1
+Glyma.20G136000.1
+Glyma.12G024700.1
+Glyma.08G182200.1
+                ")
+house_keeping_names = read.table(textConnection(house_keeping),header=FALSE)
+house_keeping_df <- countsdds[row.names(countsdds) %in%  house_keeping_names$V1, ]
+
+colnames(house_keeping_df) <- sampleTable$condition
+house_keeping_df$geneID <- row.names(house_keeping_df)
+house_keeping_df_long <- melt(house_keeping_df, id.vars="geneID")           
+
+house_keeping_df_long$log_expression <- log(house_keeping_df_long$value, 2)
+house_keeping_df_long$variable <- factor(house_keeping_df_long$variable)
+
+
+house_keeping_gg <- ggplot(house_keeping_df_long, aes(x=variable, y=log_expression)) + 
+  geom_point(position=position_jitter(w=0.1,h=0))
+house_keeping_gg + facet_wrap( ~ geneID, ncol=2)
+
+```
+
+
+#### pathogen induced genes
+```{r}
+pathogen_genes <- c("
+Glyma.02G028100.1
+Glyma.02G028600.1
+Glyma.02G268200.1
+Glyma.04G131100.1
+Glyma.13G252000.1
+Glyma.16G195600.1
+Glyma.18G177000.1
+Glyma.19G011700.1
+Glyma.19G188100.1
+                ")
+
+pathogen_genes_names = read.table(textConnection(pathogen_genes),header=FALSE)
+
+pathogen_genes_NC_df <- countsdds[row.names(countsdds) %in%  pathogen_genes_names$V1, ]
+
+colnames(pathogen_genes_NC_df) <- sampleTable$condition
+pathogen_genes_NC_df$geneID <- row.names(pathogen_genes_NC_df)
+pathogen_genes_NC_df_long <- melt(pathogen_genes_NC_df, id.vars="geneID")           
+
+pathogen_genes_NC_df_long$log_expression <- log(pathogen_genes_NC_df_long$value, 2)
+pathogen_genes_NC_df_long$variable <- factor(pathogen_genes_NC_df_long$variable)
+
+
+pathogen_gg <- ggplot(pathogen_genes_NC_df_long, aes(x=variable, y=log_expression)) + 
+  geom_point(position=position_jitter(w=0.1,h=0))
+pathogen_gg + facet_wrap( ~ geneID, ncol=2)
+
+```
+
+####known transcription factors
+
+```{r}
+known_TF <- c("
+Glyma.01G129700.1
+Glyma.06G125600.1
+Glyma.13G117600.1
+Glyma.16G047600.1
+Glyma.14G050100.1
+
+                   ")
+known_TF_names = read.table(textConnection(known_TF),header=FALSE)
+known_TF_df <- countsdds[row.names(countsdds) %in%  known_TF_names$V1, ]
+
+colnames(known_TF_df) <- sampleTable$condition
+known_TF_df$geneID <- row.names(known_TF_df)
+known_TF_df_long <- melt(known_TF_df, id.vars="geneID")           
+
+known_TF_df_long$log_expression <- log(known_TF_df_long$value, 2)
+known_TF_df_long$variable <- factor(known_TF_df_long$variable)
+
+
+known_TF_gg <- ggplot(known_TF_df_long, aes(x=variable, y=log_expression)) + 
+  geom_point(position=position_jitter(w=0.1,h=0))
+known_TF_gg + facet_wrap( ~ geneID, ncol=2)
+
+```
+
+###how many on target vs off targets
+
+####expected target: 72
+
+####total genes captured: 172
+
+####off target: 100
+
+###differentially expressed gene list
+
+###corelation between RNAseq and captureseq
+
+
+

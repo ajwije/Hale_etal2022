@@ -1,0 +1,364 @@
+---
+title: "KEGG"
+author: "Asela Wijeratne"
+date: '2022-06-25'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(clusterProfiler)
+library(dplyr)
+library(tidyverse)
+library(ggvenn)
+library(pathview)
+
+
+```
+###getting data
+
+```{r}
+##all genes with differentially expressed genes labelled
+DEseq_norm_all <- read.csv("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/20220401_DEseq_norm_bothbatch_all.csv", row.names=1)
+#differentially expressed genes 
+DEseq_norm_lin_TF <-read.csv("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/20220617_DEseq_norm_lin_TF.csv")
+
+
+#cluster_table
+probapost <- read.csv("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Data/tables/20220620_coseq_clustertable.cvs", row.names = "X")
+
+DE_R1_mock <- subset(DEseq_norm_lin_TF,DE_R1_mock == "yes")
+
+foldchange <- DE_R1_mock[,"R1_LFC"]
+diffgene_vt <- as.character(DE_R1_mock$geneId)
+KEGGenrich <- enricher(gene=as.character(DE_R1_mock[,1]),universe=as.character(row.names(DEseq_norm_all)),TERM2GENE=term2gene,TERM2NAME=term2name,pAdjustMethod='BH',pvalueCutoff=1,qvalueCutoff=1)
+KEGGenrichs <- as.data.frame(KEGGenrich)
+
+```
+
+```{r}
+kegg_df<-read.delim(paste0("data/",'kegg.txt'),header=T,sep="\t",quote ="")
+term2gene <- kegg_df[,c('pathway_id','gene_id')]
+term2name <- kegg_df[,c('pathway_id','pathway_name')]
+
+```
+
+
+```{r}
+
+KEGGdotterm <- KGEE_list_of_frames[[9]][as.numeric(KGEE_list_of_frames[[9]]$p.adjust) <= 0.05,]
+Description <- NULL
+  for (i in 1:nrow(KEGGdotterm)) {
+    if (nchar(as.character(KEGGdotterm$Description[i])) >= 50) {
+      vectors <- unlist(strsplit(as.character(KEGGdotterm$Description[i]),' '))
+      Description[i] <- paste(vectors[1],vectors[2],vectors[3],vectors[4],'...',sep=' ')}
+    if ( nchar(as.character(KEGGdotterm$Description[i])) < 50) {
+      Description[i] <- as.character(KEGGdotterm$Description[i])}}
+  KEGGdotterm$Description <- factor(Description,levels=Description)
+  ratio <- matrix(as.numeric(unlist(strsplit(as.vector(KEGGdotterm$GeneRatio),"/"))),ncol=2,byrow=TRUE)
+  KEGGdotterm$GeneRatio <- ratio[,1]/ratio[,2]
+  KEGGdotplot <- ggplot(KEGGdotterm,aes(x=GeneRatio,y=Description,colour=p.adjust,size=Count))+geom_point()+scale_colour_gradientn(colours=rainbow(4),guide="colourbar")+expand_limits(color=seq(0,0.05,by=0.005))+xlab("GeneRatio")+ylab("")+theme_bw()+theme(axis.text=element_text(color="black",size=10))+theme(panel.border=element_rect(colour="black"))+theme(plot.title=element_text(vjust=1),legend.key=element_blank())
+KEGGdotplot
+```
+
+
+
+###KEGG enrichment
+
+```{r}
+KEGG_enrichment <- function(cluster_table, total_gene, cluterNum, term2gene , term2name){
+  cluster <- cluster_table %>% filter(cluster_table[,cluterNum] > 0)
+  
+  cluster_rownames <-  as.character(row.names(cluster))
+  print(head(cluster_rownames))
+  gene_universe <- as.character(row.names(total_gene))
+  KEGGenrich <- enricher(gene=cluster_rownames,universe=gene_universe,TERM2GENE=term2gene,TERM2NAME=term2name,pAdjustMethod='BH',pvalueCutoff=1,qvalueCutoff=1)
+  
+  KEGGenrichs <- as.data.frame(KEGGenrich)
+  KEGGenrichs$cluster <- replicate(nrow(KEGGenrichs), paste("cluster", as.character(cluterNum)))
+                                   
+  
+  
+  
+  return(KEGGenrichs)
+}
+```
+
+
+###KEGG for each cluster
+
+```{r}
+##getting cluster table
+
+##create list of dataframes for the numbers of clusters
+KGEE_list_of_frames <- replicate(ncol(probapost), data.frame())
+
+
+# the use of for loop to perfom go enrichment analysis for each cluster 
+for (i in 1: ncol(probapost))
+{print (i)
+  clusteri_KEGG <- KEGG_enrichment(probapost, DEseq_norm_all, i, term2gene,term2name)
+  # create a new data frame called new_dataframe
+  KGEE_list_of_frames[[i]] <- clusteri_KEGG
+}
+
+###merge 
+```
+###Kegg dot plot
+```{r}
+for (i in 1:length(KGEE_list_of_frames)){
+  cluster_plot <- paste("cluster_KEGGdotplot", i, sep = "_")
+  cluster_plot_file <- paste("cluster_KEGGdotplot", i, sep = "_")
+    # create a new data frame called new_dataframe
+  cluster_plot_file <- KGEE_list_of_frames[[i]][as.numeric(KGEE_list_of_frames[[i]]$p.adjust) <= 0.05, ]
+  Description <- NULL
+  for(h in 1:nrow(cluster_plot_file)){
+      if (nchar(as.character(cluster_plot_file$Description[h])) >= 50) {
+      vectors <- unlist(strsplit(as.character(cluster_plot_file$Description[i]),' '))
+      Description[h] <- paste(vectors[1],vectors[2],vectors[3],vectors[4],'...',sep=' ')}
+    if ( nchar(as.character(cluster_plot_file$Description[h])) < 50) {
+      Description[h] <- as.character(cluster_plot_file$Description[h])}}
+    
+  cluster_plot_file$Description <- factor(Description,levels=Description)
+  ratio <- matrix(as.numeric(unlist(strsplit(as.vector(cluster_plot_file$GeneRatio),"/"))),ncol=2,byrow=TRUE)
+  cluster_plot_file$GeneRatio <- ratio[,1]/ratio[,2]
+  cluster_plot <- ggplot(cluster_plot_file,aes(x=GeneRatio,y=Description,colour=p.adjust,size=Count))+geom_point()+scale_colour_gradientn(colours=rainbow(4),guide="colourbar")+expand_limits(color=seq(0,0.05,by=0.005))+xlab("GeneRatio")+ylab("")+theme_bw()+theme(axis.text=element_text(color="black",size=10))+theme(panel.border=element_rect(colour="black"))+theme(plot.title=element_text(vjust=1),legend.key=element_blank())
+  
+  ggsave(paste("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Data/fig/", paste("cluster_KEGGdotplot", i, sep = "_"),".png", sep=""), plot = cluster_plot)
+  
+  write.csv(cluster_plot_file, paste("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Data/tables/", paste("cluster_KEGGdotplot", i, sep = "_"),".csv", sep=""))
+            
+}
+
+```
+
+###ggplot facet
+
+```{r}
+KEGG_cluster_df <- bind_rows(KGEE_list_of_frames, .id="df")
+write_delim(KEGG_cluster_df,"20220716_KEGG_cluster_df.csv",delim = ",",col_names = T,append=FALSE)
+KEGG_cluster_df <- KEGG_cluster_df[as.numeric(KEGG_cluster_df$p.adjust) <= 0.05, ]
+Description <- NULL
+for(h in 1:nrow(KEGG_cluster_df)){
+  if (nchar(as.character(KEGG_cluster_df$Description[h])) >= 50) {
+      vectors <- unlist(strsplit(as.character(KEGG_cluster_df$Description[i]),' '))
+      Description[h] <- paste(vectors[1],vectors[2],vectors[3],vectors[4],'...',sep=' ')}
+  if ( nchar(as.character(KEGG_cluster_df$Description[h])) < 50) {
+      Description[h] <- as.character(KEGG_cluster_df$Description[h])}}
+    
+KEGG_cluster_df$Description <- factor(Description,levels=Description)
+
+ratio <- matrix(as.numeric(unlist(strsplit(as.vector(KEGG_cluster_df$GeneRatio),"/"))),ncol=2,byrow=TRUE)
+
+KEGG_cluster_df$GeneRatio <- ratio[,1]/ratio[,2]
+
+facet_plot <- ggplot(KEGG_cluster_df,aes(x=GeneRatio,y=Description,colour=p.adjust,size=Count))+geom_point()+scale_colour_gradientn(colours=rainbow(4),guide="colourbar")+expand_limits(color=seq(0,0.05,by=0.005))+xlab("GeneRatio")+ylab("")+theme_bw()+theme(axis.text=element_text(color="black",size=8))+theme(panel.border=element_rect(colour="black"))+theme(plot.title=element_text(vjust=1),legend.key=element_blank())
+
+facet_plot <- facet_plot + facet_grid(vars(df), scales = "free")
+
+
+ggsave("20220705_KEGG_enrich.png", plot = facet_plot, dpi = 600, width = 8, height = 12)
+```
+
+
+```{r}
+KEGG_cluster_df_sig <- KEGG_cluster_df[as.numeric(KEGG_cluster_df$p.adjust) <= 0.05, ]
+KEGG_cluster_df_long <- KEGG_cluster_df_sig %>% 
+  select(ID, Description, geneID, cluster) %>%
+  separate_rows(geneID, sep='/')
+  
+
+head(KEGG_cluster_df_long)
+```
+```{r}
+KEGG_cluster_df_sig %>% 
+  
+  dplyr::group_by(Description) %>% 
+  dplyr::mutate(Total_KEGG= sum(Count))%>% 
+  dplyr::select(Description, Total_KEGG) %>%
+  filter(row_number(Description) == 1) %>%
+  slice_max(order_by= as.numeric(Total_KEGG), n=5, with_ties=T)
+```
+
+```{r}
+gene2KEGG <- tapply(KEGG_cluster_df_long$Description, KEGG_cluster_df_long$geneID, function(x)x)
+
+KEGG_genes_df <- as.data.frame(gene2KEGG, col.names = c("geneID", "KEGGname"))
+
+
+```
+
+### Reading expression data and binding predictions. 
+```{r}
+DEseq_norm_lin_TF_DAP_PRED_WRKY_bind_class <- read.csv("DEseq_norm_lin_TF_DAP_PRED_WRKY_bind_class.csv", header=TRUE, row.names = "X")
+
+head(DEseq_norm_lin_TF_DAP_PRED_WRKY_bind_class)
+RNAseq_data <- DEseq_norm_lin_TF_DAP_PRED_WRKY_bind_class
+
+GmBiP2 <- "Glyma.08G025900"
+GmBiP1 <- "Glyma.08G025700"
+GmBiP3 <- "Glyma.05g219600"
+GmBiP4 <- "Glyma.05g219400"
+
+GmERF113 <- "Glyma.16G047600"
+GmPUB1_2 <- c("Glyma.13G312700", "Glyma.12g189000")
+PR1 <- "Glyma.15G062400"
+PR2 <- "Glyma.19G134800"
+PR10_1 <- "Glyma.15G146600"
+lmms <- "Glyma.13G054400"
+GmMPK4a <- "Glyma.16G032900"
+GmMPK4b <- "Glyma.07G066800"
+GmMPK4c <- "Glyma.09G256000"
+GmMPK4d <- "Glyma.18G236800"
+
+RNAseq_data[c(GmBiP1,GmBiP2, GmBiP3,GmBiP4, GmERF113,GmPUB1_2, lmms, PR1, PR10_1, GmMPK4a, GmMPK4b, GmMPK4c, GmMPK4d, PR2), ]
+
+RNAseq_data[c(GmMPK4a, GmMPK4b, GmMPK4c, GmMPK4d),]
+```
+
+
+### add KEGG data to binding sites
+
+```{r}
+KEGG_cluster_df_long_TF <- KEGG_cluster_df_long %>%
+  mutate(WRKY59 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY59 == "yes",]), "yes", "no")) %>%
+  mutate(WRKY42 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY42 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY47 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY47 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY18 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY18 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY40 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY40 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY29= if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY29 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY6= if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY6 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY3 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY3 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY30 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY30 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY33 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY33 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY31 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY31 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY45 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY45 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY28 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY28 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY71 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY71 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY24 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY24 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY26 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY26 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY8 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY8 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY17 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY17 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY65 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY65 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY46 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY46 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY15 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY15 == "yes",]), "yes", "no"))%>%
+  mutate(WRKY7 = if_else(geneID %in% row.names(RNAseq_data[RNAseq_data$WRKY7 == "yes",]), "yes", "no"))
+  
+write_delim(KEGG_cluster_df_long_TF,"2022717_KEGG_cluster_df_long_TF.csv",delim = ",",col_names = T,append=FALSE)
+```
+
+### combine expression and KEGG genes
+
+```{r}
+KEGG_genes_df$geneID <- row.names(KEGG_genes_df)
+
+RNAseq_data_KEGG <- merge(RNAseq_data, KEGG_genes_df, by.x = "geneId", by.y = "geneID", all.x = TRUE)
+
+RNAseq_data_KEGG <- apply(RNAseq_data_KEGG,2,as.character)
+
+write.csv(RNAseq_data_KEGG,"~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Data/tables/20220720_DEseq_norm_lin_TF_DAP_PRED_KEGG.csv")
+
+#write_delim(RNAseq_data_KEGG,"20220720_DEseq_norm_lin_TF_DAP_PRED_KEGG.csv",delim = ",",col_names = T,append=FALSE)
+
+```
+```{r}
+GmBiP2 <- "Glyma.08G025900"
+GmBiP1 <- "Glyma.08G025700"
+GmBiP3 <- "Glyma.05g219600"
+GmBiP4 <- "Glyma.05g219400"
+
+DEseq_norm_all[c(GmBiP1,GmBiP2, GmBiP3,GmBiP4), ]
+```
+
+
+
+
+```{r}
+pred_list <- list(
+  WRKY_DAPseqP1 = row.names(RNAseq_data[RNAseq_data$WRKY_P1 == "yes",]), 
+  RAV_DAPseq = row.names(RNAseq_data[RNAseq_data$RAV == "yes",]), 
+  MYB_AtPred = row.names(RNAseq_data[RNAseq_data$MYB_32 == "yes",]), 
+  NAC_AtPred = row.names(RNAseq_data[RNAseq_data$NAC_32 == "yes",]),
+  ERF_AtPred = row.names(RNAseq_data[RNAseq_data$EFR_32 == "yes",]),
+  C2H2_AtPred = row.names(RNAseq_data[RNAseq_data$C2H2_32 == "yes",]),
+  bHLH_AtPred = row.names(RNAseq_data[RNAseq_data$bHLH_32 == "yes",])
+)
+
+Uniq_bound_list <- unique(unlist(pred_list, use.names = FALSE))
+ggvenn(
+  pred_list, 
+  #fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"),
+  stroke_size = 0.5, set_name_size = 4
+)
+```
+
+
+```{r}
+#RAV overlap
+nrow(RNAseq_data[Uniq_bound_list %in% row.names(RNAseq_data[complete.cases(RNAseq_data$Family),]) ,])
+
+```
+
+## KEGG maps
+```{r}
+Flavonoid <- KEGG_lfc[KEGG_lfc$pathway_name %in% "Flavonoid biosynthesis",]
+write.csv(Flavonoid,"~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Data/tables/20220720_Flavonoid.csv")
+```
+
+### get pathway genes names and Gmax genes
+
+```{r}
+KEGG_lfc <- merge(kegg_df, RNAseq_data, by.x = "gene_id", by.y = "geneId", all.x = TRUE)
+KEGG_lfc <- na.omit(KEGG_lfc)
+R1_LFC <- KEGG_lfc$R1_LFC
+names(R1_LFC) <- KEGG_lfc$pathway_gene_id
+
+R1_LFC<-R1_LFC[!is.na(R1_LFC)]
+
+R25_LFC <- KEGG_lfc$R25_LFC
+names(R25_LFC) <- KEGG_lfc$pathway_gene_id
+
+R25_LFC<-R25_LFC[!is.na(R25_LFC)]
+```
+
+### getting KEGG IDs
+
+```{r}
+KEGG_IDs <- unique(sort(KEGG_cluster_df_long$ID))
+```
+
+
+
+###KEGG maps
+
+```{r}
+pv.out_R1 <- pathview(gene.data = R1_LFC,
+                   gene.idtype ="kegg",
+                   pathway.id = KEGG_IDs,
+                   limit=c(-4, 9),
+                   species = "gmx",  out.suffix = "R1_LFC", keys.align = "y",
+                   kegg.native = T, match.data = F, multi.state = T, same.layer = T)
+
+
+
+
+
+```
+```{r}
+
+MAPK_genes <- as.data.frame(pv.out$gmx04016$plot.data.gene)[, c(1:3)]
+
+MAPK_genes_expression <- merge(KEGG_lfc, MAPK_genes, by.x = "pathway_gene_id", by.y = "kegg.names")
+
+MAPK_genes_expression <- distinct(MAPK_genes_expression[MAPK_genes_expression$pathway_name %in% "MAPK signaling pathway - plant",])
+
+write.csv(MAPK_genes_expression,"~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Data/tables/20220727_MAPK_genes_expression.csv")
+
+```
+
+
+
+
+```{r}
+
+```
+

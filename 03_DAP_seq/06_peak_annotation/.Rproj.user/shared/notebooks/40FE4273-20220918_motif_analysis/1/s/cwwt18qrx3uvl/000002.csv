@@ -1,0 +1,9 @@
+"0","cd /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions
+
+
+cut -f2,3 gene_association.tair | sort | uniq >> geneid_cname.txt
+
+wc -l geneid_cname.txt
+"
+"1","   31029 geneid_cname.txt
+"

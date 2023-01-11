@@ -1,0 +1,466 @@
+---
+title: "Hub_Analysis"
+author: "Brett Hale"
+date: "10/10/2022"
+output: html_document
+---
+
+```{r}
+library(dbplyr)
+library(devtools)
+library(dplyr)
+library(ggplot2)
+library(ggridges)
+library(ggdensity)
+library(ggpubr)
+
+```
+
+```{r}
+
+##Final prediction
+ hub_equation <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/hub_equation.csv")
+   
+##MEME-enriched TF motifs
+MEMETF <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/MEMETF.csv")
+
+##Output from TF co-occurence analysis. TF1 and TF2 info combined into column "TF"
+tf_comb <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/tf_comb.csv")
+
+##Expression data for all expressed orthologs. Orthologs identified from Panther DB.
+gene_expression <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/20221007_MEMETF_expression_data.csv")
+
+```
+
+
+```{r}
+##merge dataframes to calculate cumulative indegree
+cumulative_in_merge <- merge(hub_equation,MEMETF,by=c("TF"))
+
+
+##indegree summary stats by TF
+Indegree_summary <- cumulative_in_merge %>%
+  group_by(TF) %>%
+  summarize(indegree_min = min(Indegree),
+            indegree_q1 = quantile(Indegree, 0.25),
+            indegree_median = median(Indegree),
+            cumulative_indegree = sum(Indegree),
+            indegree_mean = mean(Indegree),
+            indegree_q3 = quantile(Indegree, 0.75),
+            indegree_max = max(Indegree))
+
+head(Indegree_summary)
+
+##Get in- and outdegree in one dataframe 
+in_and_out <- merge(MEMETF, Indegree_summary,by=c("TF"))
+
+```
+
+```{r}
+##Upper Quantile- Outdegree
+quantile(in_and_out$Outdegree)
+
+Out_q3 <- subset(in_and_out, Outdegree >=409)
+  
+  
+
+##Upper Quantile- Cumulative indegree
+quantile(in_and_out$cumulative_indegree)
+
+In_q3 <- subset(in_and_out, cumulative_indegree >=8188.0)
+
+```
+
+```{r}
+##Incorporate cumulative cosine to represent TF co-occurence
+cosine <- merge(tf_comb,MEMETF,by=c("TF"))
+
+TF_cosine <- cosine %>%
+  group_by(TF) %>%
+  summarize(cumulative_cosine = sum(cosine))
+
+
+##Upper Quantile- Cumulative cosine
+quantile(TF_cosine$cumulative_cosine)
+
+cosine_q3 <- subset(TF_cosine, cumulative_cosine>=6.1597308)
+
+```
+
+```{r}
+##Upper Quantile- Mean Absolute Expression
+quantile(gene_expression$Mean_LFC)
+
+gene_expression_q3 <- subset(gene_expression, Mean_LFC>=1.71598381)
+
+gene_expression_q3 <- rename(gene_expression_q3, TF = ALT_ID)
+                             
+```
+
+```{r}
+##Get hubs from overlap
+
+##in- and outdegree q3 merge
+in_and_out_q3_merge <- merge(In_q3, Out_q3,by=c("TF"))
+
+
+##indegree, outdegree, and cosine q3 merge
+degree_cosine_merge <- merge(in_and_out_q3_merge, cosine_q3, by=c("TF"))
+
+
+##indegree, outdegree, cosine, and expression q3 merge
+degree_cosine_merge <- rename(degree_cosine_merge, GmID = Gm_Ortholog.x)
+
+degree_cosine_merge_1 <- subset(degree_cosine_merge, select = -c(GmID,Gm_Ortholog.y) )
+
+
+hubs <- merge(degree_cosine_merge_1, gene_expression_q3, by=c("TF"))
+
+head(hubs)
+
+write.csv(hubs,"/Volumes/USB20FD/PhD Research/Chapter_2/final_hub_genes.csv", row.names = FALSE)
+
+```
+
+```{r}
+
+##Outdegree density plot
+quantile(in_and_out$Outdegree)
+median(in_and_out$Outdegree)
+
+outdegree_den <- density(in_and_out$Outdegree)
+
+
+jpeg('outdegree_density.jpg', units="in", width = 6, height = 4, res=600)
+plot(outdegree_den, main = "Outdegree")
+
+polygon(c(outdegree_den$x[outdegree_den$x >= 409 ], 409),
+        c(outdegree_den$y[outdegree_den$x >= 409 ], 0),
+        col = "lightsteelblue",
+        border = 1)
+abline(v = 201, lty = 3, lwd = 2)
+rug(in_and_out$Outdegree)
+
+dev.off()
+
+```
+
+```{r}
+##Indegree density plot
+quantile(in_and_out$cumulative_indegree)
+median(in_and_out$cumulative_indegree)
+
+indegree_den <- density(in_and_out$cumulative_indegree)
+
+jpeg('cumulative_indegree_density.jpg', units="in", width = 6, height = 4, res=600)
+
+
+plot(indegree_den, main = "Cumulative indegree")
+
+polygon(c(indegree_den$x[indegree_den$x >= 8188.0 ], 8188.0),
+        c(indegree_den$y[indegree_den$x >= 8188.0 ], 0),
+        col = "lightsteelblue",
+        border = 1)
+abline(v = 4436.5, lty = 3, lwd = 2)
+rug(in_and_out$cumulative_indegree)
+
+dev.off()
+
+```
+
+```{r}
+##Cosine density plot
+quantile(TF_cosine$cumulative_cosine)
+median(TF_cosine$cumulative_cosine)
+
+cosine_den <- density(TF_cosine$cumulative_cosine)
+
+
+jpeg('cosine_density.jpg', units="in", width = 6, height = 4, res=600)
+
+
+plot(cosine_den, main = "Cumulative cosine")
+
+polygon(c(cosine_den$x[cosine_den$x >= 6.1597308 ], 6.1597308),
+        c(cosine_den$y[cosine_den$x >= 6.1597308 ], 0),
+        col = "lightsteelblue",
+        border = 1)
+abline(v = 3.644659, lty = 3, lwd = 2)
+rug(TF_cosine$cumulative_cosine)
+
+dev.off()
+
+```
+
+```{r}
+##Expression density plot
+quantile(gene_expression$Mean_LFC)
+median(gene_expression$Mean_LFC)
+
+expression_den <- density(gene_expression$Mean_LFC)
+
+
+jpeg('expression_density.jpg', units="in", width = 6, height = 4, res=600)
+
+
+plot(expression_den, main = "Mean |FC|")
+
+polygon(c(expression_den$x[cosine_den$x >= 1.71598381 ], 1.71598381),
+        c(expression_den$y[cosine_den$x >= 1.71598381 ], 0),
+        col = "lightsteelblue",
+        border = 1)
+abline(v = 0.7627243, lty = 3, lwd = 2)
+rug(gene_expression$Mean_LFC)
+
+dev.off()
+
+```
+
+
+```{r}
+##Top targets
+
+##Cumulative Outdegree
+Cumulative_outdegree <- hub_equation %>%
+  group_by(Target) %>%
+  summarize(Cumulative_outdegree = sum(Outdegree))
+
+
+##Upper Quantile- Cumulative Outdegree
+quantile(Cumulative_outdegree$Cumulative_outdegree)
+
+Cumulative_outdegree_q3 <- subset(Cumulative_outdegree, Cumulative_outdegree>=10029)
+
+median(Cumulative_outdegree$Cumulative_outdegree)
+
+
+##density plot
+cum_out_den <- density(Cumulative_outdegree$Cumulative_outdegree)
+
+
+jpeg('cumulative_outdegree_density.jpg', units="in", width = 6, height = 4, res=600)
+
+
+plot(cum_out_den, main = "Cumulative outdegree")
+
+polygon(c(cum_out_den$x[cum_out_den$x >= 10029 ], 10029),
+        c(cum_out_den$y[cum_out_den$x >= 10029 ], 0),
+        col = "indianred3",
+        border = 1)
+abline(v = 4159, lty = 3, lwd = 2)
+rug(Cumulative_outdegree$Cumulative_outdegree)
+
+dev.off()
+
+```
+
+```{r}
+##Indegree
+
+target_indegree <- distinct(hub_equation, Target, .keep_all = TRUE)
+  
+
+quantile(target_indegree$Indegree)
+
+Indegree_q3 <- subset(target_indegree, Indegree>=16)
+
+median(target_indegree$Indegree)
+
+
+##density plot
+indegree_den_2 <- density(target_indegree$Indegree)
+
+
+jpeg('indegree_density.jpg', units="in", width = 6, height = 4, res=600)
+
+
+plot(indegree_den_2, main = "Indegree")
+
+polygon(c(indegree_den_2$x[indegree_den_2$x >= 16], 16),
+        c(indegree_den_2$y[indegree_den_2$x >= 16 ], 0),
+        col = "indianred3",
+        border = 1)
+abline(v = 8, lty = 3, lwd = 2)
+rug(target_indegree$Indegree)
+
+dev.off()
+
+```
+
+```{r}
+##Sum Cumulative Cosine
+Sum_cum <- merge(hub_equation,TF_cosine,by=c("TF"))
+
+Sum_cum_by_target <- Sum_cum %>%
+  group_by(Target) %>%
+  summarize(Sum_cumulative_cosine = sum(cumulative_cosine))
+
+quantile(Sum_cum_by_target$Sum_cumulative_cosine)
+
+Sum_cum_by_target_q3 <- subset(Sum_cum_by_target, Sum_cumulative_cosine>=57.3402207)
+
+median(Sum_cum_by_target$Sum_cumulative_cosine)
+
+##density plot
+Sum_cum_den <- density(Sum_cum_by_target$Sum_cumulative_cosine)
+
+
+jpeg('sum_cumulative_cosine_density.jpg', units="in", width = 6, height = 4, res=600)
+
+
+plot(Sum_cum_den, main = "Sum cumulative cosine")
+
+polygon(c(Sum_cum_den$x[Sum_cum_den$x >= 57.3402207], 57.3402207),
+        c(Sum_cum_den$y[Sum_cum_den$x >= 57.3402207 ], 0),
+        col = "indianred3",
+        border = 1)
+abline(v = 20.7369, lty = 3, lwd = 2)
+rug(Sum_cum_by_target$Sum_cumulative_cosine)
+
+dev.off()
+
+```
+
+```{r}
+
+##Expression data- Update with new S1
+Target_expression <- read.csv("~/Downloads/Target_expression.csv") ##saved on Windows
+
+expression_target <- merge(Target_expression,Cumulative_outdegree,by=c("Target"))
+
+##Mean FC
+quantile(expression_target$mean_fc)
+
+expression_target_q3 <- subset(expression_target, mean_fc>=1.9841481)
+
+median(expression_target$mean_fc)
+
+##density plot
+expression_target_den <- density(expression_target$mean_fc)
+
+
+jpeg('target_expression_density.jpg', units="in", width = 6, height = 4, res=600)
+
+
+plot(expression_target_den, main = "Mean |FC|")
+
+polygon(c(expression_target_den$x[expression_target_den$x >= 1.9841481], 1.9841481),
+        c(expression_target_den$y[expression_target_den$x >= 1.9841481 ], 0),
+        col = "indianred3",
+        border = 1)
+abline(v = 1.100986, lty = 3, lwd = 2)
+rug(expression_target$mean_fc)
+
+dev.off()
+
+
+```
+
+
+```{r}
+##Top targets
+
+##Cumulative outdegree and indegree
+target_cumout_in <- merge(Cumulative_outdegree_q3,Indegree_q3,by=c("Target"))
+
+
+##Cumulative outdegree, indegree, and sum cumulative cosine
+
+target_cumout_in_sumcum <- merge(target_cumout_in,Sum_cum_by_target_q3,by=c("Target"))
+
+##Cumulative outdegree, indegree, sum cumulative cosine, and expression
+target_cumout_in_sumcum_expression <- merge(target_cumout_in_sumcum,expression_target_q3,by=c("Target"))
+
+
+write.csv(target_cumout_in_sumcum_expression,"/Volumes/USB20FD/PhD Research/Chapter_2/Top_targets.csv", row.names = FALSE)
+
+
+##Visualization
+
+Target_heatmap <- read.csv("~/Downloads/Target_heatmap.csv") ##Saved on Windows
+
+heatmap <- merge(target_cumout_in_sumcum_expression,Target_heatmap,by=c("Target"))
+
+
+ggplot(heatmap, aes(x = Treatment, y = Target, fill = FC)) +
+  geom_tile() + 
+  theme(axis.text.y = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 16, face = "bold", color ="black")) +
+  theme(axis.ticks = element_blank()) +
+  scale_fill_gradient2(
+  low = ("yellow2"),
+  mid = "white",
+  high = ("navyblue"),
+  midpoint = 0) +
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1, 'cm'), #change legend key height
+        legend.key.width = unit(1, 'cm'), #change legend key width
+        legend.title = element_text(size=14, face = "bold"), #change legend title font size
+        legend.text = element_text(size=12, face = "bold")) + #change legend text font size
+  theme(panel.background = element_rect(fill =  "white"))
+
+ 
+ggsave("target_heatmap.png", width = 10, height = 8, units = "in", dpi = 600)
+
+```
+
+```{r}
+##Figure 6a
+Family_Binding <- read.csv("~/Downloads/Family_Binding.csv") ##Saved on Windows
+
+##Predicted Binding
+ggplot(Family_Binding, aes(x = Family, y = geneId, fill = Family_Binding)) +
+  geom_tile() + 
+  theme(axis.text.y = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 16, face = "bold", color ="black")) +
+  theme(axis.ticks = element_blank()) +
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1, 'cm'), #change legend key height
+        legend.key.width = unit(1, 'cm'), #change legend key width
+        legend.title = element_text(size=14, face = "bold"), #change legend title font size
+        legend.text = element_text(size=12, face = "bold")) + #change legend text font size
+  theme(panel.background = element_rect(fill =  "white")) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(fill = "Predicted Binding")
+
+ggsave("Binding_heatmap.png", width = 10, height = 8, units = "in", dpi = 600)
+
+
+##Gene Expression
+ggplot(Target_heatmap, aes(x = Treatment, y = Target, fill = FC)) +
+  geom_tile(width =1, height = 10) + 
+  theme(axis.text.y = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 16, face = "bold", color ="black")) +
+  theme(axis.ticks = element_blank()) +
+  theme(panel.background = element_rect(fill =  "white")) +
+  labs(fill = "FC") +
+  scale_fill_gradient2(
+  low = ("blue"),
+  mid = "white",
+  high = ("red"),
+  midpoint = 0) +
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1, 'cm'), #change legend key height
+        legend.key.width = unit(1, 'cm'), #change legend key width
+        legend.title = element_text(size=14, face = "bold"), #change legend title font size
+        legend.text = element_text(size=12, face = "bold"))  #change legend text font size
+
+ggsave("Expression_heatmap.png", width = 3, height = 8, units = "in", dpi = 600)
+
+##DAP Binding
+
+DAP_Binding <- read.csv("~/Downloads/DAP_Binding.csv") ##Saved on Windows
+
+ggplot(DAP_Binding, aes(x = Sample, y = geneId, fill = Binding)) +
+  geom_tile() + 
+  theme(axis.text.y = element_blank(), axis.title = element_blank(), axis.text.x = element_text(size = 16, face = "bold", color ="black")) +
+  theme(axis.ticks = element_blank()) +
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1, 'cm'), #change legend key height
+        legend.key.width = unit(1, 'cm'), #change legend key width
+        legend.title = element_text(size=14, face = "bold"), #change legend title font size
+        legend.text = element_text(size=12, face = "bold")) + #change legend text font size
+  theme(panel.background = element_rect(fill =  "white")) +
+  scale_fill_brewer(palette = "Spectral") +
+  labs(fill = "DAP Binding")
+
+ggsave("DAP_heatmap.png", width = 7, height = 8, units = "in", dpi = 600)
+```
+

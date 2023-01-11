@@ -1,0 +1,7 @@
+"0","Indegree_sum <- merged %>%"
+"0","  group_by(Target) %>%"
+"0","  summarize('indegree_sum'=sum(Indegree)) %>%"
+"0","  "
+"0","  ungroup() %>%"
+"0","  left_join(merged)"
+"2","Joining, by = ""Target"""

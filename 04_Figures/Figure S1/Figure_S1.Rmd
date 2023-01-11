@@ -1,0 +1,121 @@
+---
+title: "Figure_S1"
+author: "Brett Hale"
+date: "12/24/2022"
+output: html_document
+---
+
+```{r packages}
+library(ggplot2)
+library(dbplyr)
+library(dplyr)
+library(devtools)
+library(tidyverse)
+library(scales)
+```
+
+```{r Reference}
+##Data
+Figure_S1_Capture_Reference <- read.csv("~/Downloads/Figure_S1_Capture_Reference.csv")
+
+##Expression
+ggplot(Figure_S1_Capture_Reference, aes(x = geneId, y = Condition, fill = FC)) +
+   geom_tile(color = "black",
+             lwd = 0.5,
+             linetype = 1) + 
+   scale_fill_gradient2(
+   low = ("#0a2d46"),
+   mid = ("white"),
+   high = ("#421401"),
+   midpoint = 0) +
+   coord_flip() +
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color = "black", size = 14, face = "bold"), axis.ticks = element_blank()) +
+   theme(axis.text.y = element_text(color = "black", size = 12, face = "bold")) +
+   theme(axis.title = element_blank()) +
+   theme(panel.background = element_rect(fill = "white")) + 
+   theme(legend.position = c(0, -0.1), legend.direction = "horizontal") +
+   labs(fill = "FC") +
+   guides(colour = guide_legend(title.position = "right")) +
+   theme(legend.key.size = unit(1, 'cm'), #change legend key size
+         legend.key.height = unit(1, 'cm'), #change legend key height
+         legend.key.width = unit(1, 'cm'), #change legend key width
+         legend.title = element_text(size=12, face = "bold"), #change legend title font size
+         legend.text = element_text(size=10, face = "bold"))
+
+ ggsave("reference_lfc.png", width = 12, height = 8, units = "in", dpi = 600)
+ 
+ ##DE
+ ggplot(Figure_S1_Capture_Reference, aes(x = geneId, y = Condition, fill = DE)) +
+   geom_tile(color = "black",
+             lwd = 0.5,
+             linetype = 1) + 
+  scale_fill_manual(values = c("#122c43","#c38f16")) +
+   coord_flip() +
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color = "black", size = 14, face = "bold"), axis.ticks = element_blank()) + 
+   theme(axis.text.y = element_blank()) +
+   theme(axis.title = element_blank()) +
+   theme(panel.background = element_rect(fill = "white")) + 
+   labs(fill = "DE") +
+   guides(colour = guide_legend(title.position = "right")) +
+   theme(legend.key.size = unit(1, 'cm'), #change legend key size
+         legend.key.height = unit(1, 'cm'), #change legend key height
+         legend.key.width = unit(1, 'cm'), #change legend key width
+         legend.title = element_text(size=12, face = "bold"), #change legend title font size
+         legend.text = element_text(size=10, face = "bold")) 
+ 
+ ggsave("reference_de.png", width = 3, height = 8, units = "in", dpi = 600)
+```
+
+```{r Pathogen-induced}
+
+##Data
+Figure_S1_Capture_Pathogen <- read.csv("~/Downloads/Figure_S1_Capture_Pathogen.csv")
+
+##Expression
+ggplot(Figure_S1_Capture_Pathogen, aes(x = geneId, y = Condition, fill = FC)) +
+   geom_tile(color = "black",
+             lwd = 0.5,
+             linetype = 1) + 
+   scale_fill_gradient2(
+   low = ("#0a2d46"),
+   mid = ("white"),
+   high = ("#421401"),
+   midpoint = 0) +
+   coord_flip() +
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color = "black", size = 14, face = "bold"), axis.ticks = element_blank()) +
+   theme(axis.text.y = element_text(color = "black", size = 12, face = "bold")) +
+   theme(axis.title = element_blank()) +
+   theme(panel.background = element_rect(fill = "white")) + 
+   theme(legend.position = c(0, -0.1), legend.direction = "horizontal") +
+   labs(fill = "FC") +
+   guides(colour = guide_legend(title.position = "right")) +
+   theme(legend.key.size = unit(1, 'cm'), #change legend key size
+         legend.key.height = unit(1, 'cm'), #change legend key height
+         legend.key.width = unit(1, 'cm'), #change legend key width
+         legend.title = element_text(size=12, face = "bold"), #change legend title font size
+         legend.text = element_text(size=10, face = "bold"))
+
+ ggsave("pathogen_lfc.png", width = 12, height = 8, units = "in", dpi = 600)
+ 
+ ##DE
+ ggplot(Figure_S1_Capture_Pathogen, aes(x = geneId, y = Condition, fill = DE)) +
+   geom_tile(color = "black",
+             lwd = 0.5,
+             linetype = 1) + 
+  scale_fill_manual(values = c("#122c43","#c38f16")) +
+   coord_flip() +
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, color = "black", size = 14, face = "bold"), axis.ticks = element_blank()) + 
+   theme(axis.text.y = element_blank()) +
+   theme(axis.title = element_blank()) +
+   theme(panel.background = element_rect(fill = "white")) + 
+   labs(fill = "DE") +
+   guides(colour = guide_legend(title.position = "right")) +
+   theme(legend.key.size = unit(1, 'cm'), #change legend key size
+         legend.key.height = unit(1, 'cm'), #change legend key height
+         legend.key.width = unit(1, 'cm'), #change legend key width
+         legend.title = element_text(size=12, face = "bold"), #change legend title font size
+         legend.text = element_text(size=10, face = "bold")) 
+ 
+ ggsave("pathogen_de.png", width = 3, height = 8, units = "in", dpi = 600)
+```
+

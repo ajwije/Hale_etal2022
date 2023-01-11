@@ -1,0 +1,109 @@
+---
+title: "Figure_2e"
+author: "Brett Hale"
+date: "8/17/2022"
+output: html_document
+---
+
+```{r}
+library(dbplyr)
+library(dplyr)
+library(ggplot2)
+library(devtools)
+library(ggrepel)
+
+```
+
+```{r}
+`20220716_KEGG_cluster_df` <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/20220716_KEGG_cluster_df.csv", stringsAsFactors=TRUE)
+
+kegg <- `20220716_KEGG_cluster_df`
+```
+
+
+```{r}
+
+GO_cluster <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/Word_Cloud_Attempt/GO_cluster.csv", stringsAsFactors=FALSE)
+
+
+GO_cluster$Description <- gsub("^.{0,11}", "", GO_cluster$Description)
+
+GO_cluster$cluster <- as.character(GO_cluster$cluster)
+GO_cluster$pvalue <- as.numeric(GO_cluster$pvalue)
+```
+
+
+```{r GO barplot}
+GO_cluster %>%
+  group_by(cluster) %>%
+  top_n(5, -pvalue) %>%
+ggplot(aes(reorder_within(Description, -pvalue, cluster), pvalue)) +
+  geom_col(fill = "firebrick3", alpha = 0.8, colour = "black") +
+  coord_flip() +
+facet_grid(cluster ~ ., scales = 'free') +
+  theme(axis.text.y = element_blank(), axis.text.x = element_text(size = 12, color = "black"), axis.title.y = element_blank(), axis.ticks = element_blank(), strip.text = element_blank(), axis.title.x = element_text(size = 14), 
+        panel.border = element_rect(color =  "black", fill =  NA), panel.background = element_rect(fill = "white")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  geom_text(aes(label = Description, y = 0.0000000000001)) +
+  scale_y_continuous(trans = trans_reverser('log10')) +
+  labs (y = "p-value")
+  
+  
+
+
+ggsave("go_bar_sample_1.png", width = 7, height = 12, units = "in", dpi = 600)
+```
+
+```{r KEGG bar plot}
+
+ DF_filtered <- kegg %>% filter(p.adjust <= 0.05)
+  
+
+DF_filtered %>%
+  group_by(cluster) %>%
+  top_n(5, -p.adjust) %>%
+ggplot(aes(reorder_within(Description, -p.adjust, cluster), p.adjust)) +
+  geom_col(fill = "blue4", alpha = 0.4, colour = "black") +
+ coord_flip() +
+facet_grid(cluster ~ ., scales = 'free') +
+  theme(axis.text.y = element_blank(), axis.text.x = element_text(size = 12, color = "black"), axis.title.y = element_blank(), axis.ticks = element_blank(), strip.text = element_blank(), axis.title.x = element_text(size = 14), 
+        panel.border = element_rect(color =  "black", fill =  NA), panel.background = element_rect(fill = "white")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  geom_text(aes(label = Description, y = 0.0000000000001)) +
+  scale_y_continuous(trans = trans_reverser('log10')) +
+  labs (y = "adjusted p-value")
+ 
+
+ggsave("kegg_bar_sample_1.png", width = 7, height = 12, units = "in", dpi = 600)
+
+```
+
+
+
+```{r}
+TF_cluster <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/Word_Cloud_Attempt/TF_cluster.csv")
+
+TF_cluster <- na.omit(TF_cluster)
+
+library(forcats)
+
+oof <- TF_cluster %>%
+    group_by(cluster, Family) %>%
+    summarise(count = n()) %>%
+    top_n(n = 3, wt = count)
+
+
+ggplot(oof, aes(reorder_within(Family, count, cluster), count)) +
+  geom_col(fill = "darkgreen", alpha = 0.6, colour = "black") +
+  coord_flip() +
+  scale_x_reordered() +
+facet_grid(cluster ~ ., scales = 'free') +
+  theme(axis.text.y = element_blank(), axis.text.x = element_text(size = 14, color = "black"), axis.title = element_blank(), axis.ticks = element_blank(), strip.text = element_blank(),
+        panel.border = element_rect(color =  "black", fill =  NA), panel.background = element_rect(fill = "white")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  geom_text(aes(label = Family),position = position_stack(vjust = 0.75)) 
+
+ggsave("TF_cluster.png", width = 4, height = 12, units = "in", dpi = 600)
+```
+
+

@@ -1,0 +1,8 @@
+"0","###read enrich motifs"
+"0","MEME_enrich <- read.delim(""~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20221002_MEME_enrich.txt"")"
+"0",""
+"0",""
+"0","tf_motif_freq_enrich <- MEME_enrich  %>%"
+"0","  select(RANK:ID.1) %>%"
+"0","  right_join(freq_tf_motifs, by = c(""ALT_ID"" = ""V4""))"
+"0","write.csv(tf_motif_freq_enrich, ""/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/20221005_tf_motif_freq_enrich.csv"", quote = FALSE)"

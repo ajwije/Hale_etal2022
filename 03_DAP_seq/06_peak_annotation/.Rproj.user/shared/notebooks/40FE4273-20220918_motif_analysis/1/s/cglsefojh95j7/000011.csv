@@ -1,0 +1,4 @@
+"0","random_path <- ""/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/Random_set/"""
+"0","random_bed <- read.table(paste(random_path, ""all_randmotif_sorted_new.bed"", sep = """"),header = FALSE, sep=""\t"",stringsAsFactors=FALSE, quote="""")"
+"0",""
+"0","random_bed$TF_family <- gsub('[[:digit:]]+', '', random_bed$V4)"

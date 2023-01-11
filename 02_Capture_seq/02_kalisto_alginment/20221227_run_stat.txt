@@ -1,0 +1,113 @@
+TC_1_1/run_info.json
+{
+	"n_targets": 52872,
+	"n_bootstraps": 0,
+	"n_processed": 1135014,
+	"n_pseudoaligned": 1106470,
+	"n_unique": 1099544,
+	"p_pseudoaligned": 97.5,
+	"p_unique": 96.9,
+	"kallisto_version": "0.48.0",
+	"index_version": 10,
+	"start_time": "Mon Dec 19 20:44:49 2022",
+	"call": "kallisto quant -i /home/awijeratne/Projects/capture_seq/Transcript_ref_V3/Gmax_508_Wm82.a4.v1.transcript_primaryTranscriptOnly.idx -o /home/awijeratne/Projects/capture_seq/03_kalisto_alginment/TC_1_1 /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_1_bb_trim_R1.fastq /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_1_bb_trim_R2.fastq"
+}
+TC_1_2/run_info.json
+{
+	"n_targets": 52872,
+	"n_bootstraps": 0,
+	"n_processed": 1037646,
+	"n_pseudoaligned": 1011519,
+	"n_unique": 1003162,
+	"p_pseudoaligned": 97.5,
+	"p_unique": 96.7,
+	"kallisto_version": "0.48.0",
+	"index_version": 10,
+	"start_time": "Mon Dec 19 20:45:02 2022",
+	"call": "kallisto quant -i /home/awijeratne/Projects/capture_seq/Transcript_ref_V3/Gmax_508_Wm82.a4.v1.transcript_primaryTranscriptOnly.idx -o /home/awijeratne/Projects/capture_seq/03_kalisto_alginment/TC_1_2 /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_2_bb_trim_R1.fastq /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_2_bb_trim_R2.fastq"
+}
+TC_1_3/run_info.json
+{
+	"n_targets": 52872,
+	"n_bootstraps": 0,
+	"n_processed": 1364621,
+	"n_pseudoaligned": 1329715,
+	"n_unique": 1321370,
+	"p_pseudoaligned": 97.4,
+	"p_unique": 96.8,
+	"kallisto_version": "0.48.0",
+	"index_version": 10,
+	"start_time": "Mon Dec 19 20:45:15 2022",
+	"call": "kallisto quant -i /home/awijeratne/Projects/capture_seq/Transcript_ref_V3/Gmax_508_Wm82.a4.v1.transcript_primaryTranscriptOnly.idx -o /home/awijeratne/Projects/capture_seq/03_kalisto_alginment/TC_1_3 /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_3_bb_trim_R1.fastq /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_3_bb_trim_R2.fastq"
+}
+TC_1_4/run_info.json
+{
+	"n_targets": 52872,
+	"n_bootstraps": 0,
+	"n_processed": 757173,
+	"n_pseudoaligned": 737622,
+	"n_unique": 736926,
+	"p_pseudoaligned": 97.4,
+	"p_unique": 97.3,
+	"kallisto_version": "0.48.0",
+	"index_version": 10,
+	"start_time": "Mon Dec 19 20:45:28 2022",
+	"call": "kallisto quant -i /home/awijeratne/Projects/capture_seq/Transcript_ref_V3/Gmax_508_Wm82.a4.v1.transcript_primaryTranscriptOnly.idx -o /home/awijeratne/Projects/capture_seq/03_kalisto_alginment/TC_1_4 /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_4_bb_trim_R1.fastq /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_4_bb_trim_R2.fastq"
+}
+TC_1_5/run_info.json
+{
+	"n_targets": 52872,
+	"n_bootstraps": 0,
+	"n_processed": 472378,
+	"n_pseudoaligned": 460848,
+	"n_unique": 459854,
+	"p_pseudoaligned": 97.6,
+	"p_unique": 97.3,
+	"kallisto_version": "0.48.0",
+	"index_version": 10,
+	"start_time": "Mon Dec 19 20:45:39 2022",
+	"call": "kallisto quant -i /home/awijeratne/Projects/capture_seq/Transcript_ref_V3/Gmax_508_Wm82.a4.v1.transcript_primaryTranscriptOnly.idx -o /home/awijeratne/Projects/capture_seq/03_kalisto_alginment/TC_1_5 /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_5_bb_trim_R1.fastq /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_5_bb_trim_R2.fastq"
+}
+TC_1_6/run_info.json
+{
+	"n_targets": 52872,
+	"n_bootstraps": 0,
+	"n_processed": 594797,
+	"n_pseudoaligned": 580083,
+	"n_unique": 579011,
+	"p_pseudoaligned": 97.5,
+	"p_unique": 97.3,
+	"kallisto_version": "0.48.0",
+	"index_version": 10,
+	"start_time": "Mon Dec 19 20:45:49 2022",
+	"call": "kallisto quant -i /home/awijeratne/Projects/capture_seq/Transcript_ref_V3/Gmax_508_Wm82.a4.v1.transcript_primaryTranscriptOnly.idx -o /home/awijeratne/Projects/capture_seq/03_kalisto_alginment/TC_1_6 /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_6_bb_trim_R1.fastq /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_6_bb_trim_R2.fastq"
+}
+TC_1_7/run_info.json
+{
+	"n_targets": 52872,
+	"n_bootstraps": 0,
+	"n_processed": 1067169,
+	"n_pseudoaligned": 1044934,
+	"n_unique": 1035882,
+	"p_pseudoaligned": 97.9,
+	"p_unique": 97.1,
+	"kallisto_version": "0.48.0",
+	"index_version": 10,
+	"start_time": "Mon Dec 19 20:45:59 2022",
+	"call": "kallisto quant -i /home/awijeratne/Projects/capture_seq/Transcript_ref_V3/Gmax_508_Wm82.a4.v1.transcript_primaryTranscriptOnly.idx -o /home/awijeratne/Projects/capture_seq/03_kalisto_alginment/TC_1_7 /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_7_bb_trim_R1.fastq /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_7_bb_trim_R2.fastq"
+}
+TC_1_8/run_info.json
+{
+	"n_targets": 52872,
+	"n_bootstraps": 0,
+	"n_processed": 642834,
+	"n_pseudoaligned": 627582,
+	"n_unique": 624194,
+	"p_pseudoaligned": 97.6,
+	"p_unique": 97.1,
+	"kallisto_version": "0.48.0",
+	"index_version": 10,
+	"start_time": "Mon Dec 19 20:46:12 2022",
+	"call": "kallisto quant -i /home/awijeratne/Projects/capture_seq/Transcript_ref_V3/Gmax_508_Wm82.a4.v1.transcript_primaryTranscriptOnly.idx -o /home/awijeratne/Projects/capture_seq/03_kalisto_alginment/TC_1_8 /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_8_bb_trim_R1.fastq /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_8_bb_trim_R2.fastq"
+}
+TC_1_9/run_info.json

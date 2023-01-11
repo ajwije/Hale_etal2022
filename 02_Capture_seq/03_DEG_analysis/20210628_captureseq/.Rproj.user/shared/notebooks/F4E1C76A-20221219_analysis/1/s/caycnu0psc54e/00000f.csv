@@ -1,0 +1,151 @@
+"0","#library(apeglm)"
+"0","library(tximport)"
+"0","library(DESeq2)"
+"2","Loading required package: S4Vectors
+"
+"2","Loading required package: stats4
+"
+"2","Loading required package: BiocGenerics
+"
+"2","
+Attaching package: ‘BiocGenerics’
+
+"
+"2","The following objects are masked from ‘package:stats’:
+
+    IQR, mad, sd, var, xtabs
+
+"
+"2","The following objects are masked from ‘package:base’:
+
+    anyDuplicated, append, as.data.frame, basename, cbind, colnames,
+    dirname, do.call, duplicated, eval, evalq, Filter, Find, get,
+    grep, grepl, intersect, is.unsorted, lapply, Map, mapply, match,
+    mget, order, paste, pmax, pmax.int, pmin, pmin.int, Position,
+    rank, rbind, Reduce, rownames, sapply, setdiff, sort, table,
+    tapply, union, unique, unsplit, which.max, which.min
+
+"
+"2","
+Attaching package: ‘S4Vectors’
+
+"
+"2","The following objects are masked from ‘package:base’:
+
+    expand.grid, I, unname
+
+"
+"2","Loading required package: IRanges
+"
+"2","Loading required package: GenomicRanges
+"
+"2","Loading required package: GenomeInfoDb
+"
+"2","Loading required package: SummarizedExperiment
+"
+"2","Loading required package: MatrixGenerics
+"
+"2","Loading required package: matrixStats
+"
+"2","
+Attaching package: ‘MatrixGenerics’
+
+"
+"2","The following objects are masked from ‘package:matrixStats’:
+
+    colAlls, colAnyNAs, colAnys, colAvgsPerRowSet, colCollapse,
+    colCounts, colCummaxs, colCummins, colCumprods, colCumsums,
+    colDiffs, colIQRDiffs, colIQRs, colLogSumExps, colMadDiffs,
+    colMads, colMaxs, colMeans2, colMedians, colMins, colOrderStats,
+    colProds, colQuantiles, colRanges, colRanks, colSdDiffs, colSds,
+    colSums2, colTabulates, colVarDiffs, colVars, colWeightedMads,
+    colWeightedMeans, colWeightedMedians, colWeightedSds,
+    colWeightedVars, rowAlls, rowAnyNAs, rowAnys, rowAvgsPerColSet,
+    rowCollapse, rowCounts, rowCummaxs, rowCummins, rowCumprods,
+    rowCumsums, rowDiffs, rowIQRDiffs, rowIQRs, rowLogSumExps,
+    rowMadDiffs, rowMads, rowMaxs, rowMeans2, rowMedians, rowMins,
+    rowOrderStats, rowProds, rowQuantiles, rowRanges, rowRanks,
+    rowSdDiffs, rowSds, rowSums2, rowTabulates, rowVarDiffs, rowVars,
+    rowWeightedMads, rowWeightedMeans, rowWeightedMedians,
+    rowWeightedSds, rowWeightedVars
+
+"
+"2","Loading required package: Biobase
+"
+"2","Welcome to Bioconductor
+
+    Vignettes contain introductory material; view with
+    'browseVignettes()'. To cite Bioconductor, see
+    'citation(""Biobase"")', and for packages 'citation(""pkgname"")'.
+
+"
+"2","
+Attaching package: ‘Biobase’
+
+"
+"2","The following object is masked from ‘package:MatrixGenerics’:
+
+    rowMedians
+
+"
+"2","The following objects are masked from ‘package:matrixStats’:
+
+    anyMissing, rowMedians
+
+"
+"0","library(""pheatmap"")"
+"0","library(ggplot2)"
+"0","#library(calibrate)"
+"0","library(""RColorBrewer"")"
+"0","library(dplyr)"
+"2","
+Attaching package: ‘dplyr’
+
+"
+"2","The following object is masked from ‘package:Biobase’:
+
+    combine
+
+"
+"2","The following object is masked from ‘package:matrixStats’:
+
+    count
+
+"
+"2","The following objects are masked from ‘package:GenomicRanges’:
+
+    intersect, setdiff, union
+
+"
+"2","The following object is masked from ‘package:GenomeInfoDb’:
+
+    intersect
+
+"
+"2","The following objects are masked from ‘package:IRanges’:
+
+    collapse, desc, intersect, setdiff, slice, union
+
+"
+"2","The following objects are masked from ‘package:S4Vectors’:
+
+    first, intersect, rename, setdiff, setequal, union
+
+"
+"2","The following objects are masked from ‘package:BiocGenerics’:
+
+    combine, intersect, setdiff, union
+
+"
+"2","The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+"
+"2","The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+"
+"0","library(reshape2)"
+"0","############################################"

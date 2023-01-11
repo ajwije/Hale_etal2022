@@ -1,0 +1,24 @@
+"0","cd /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/DE_set
+for i in ERF MYB NAC RAV blhl wrky
+do {
+echo ${i}_motif_sorted_new.bed
+cat ${i}_motif_sorted_new.bed | cut -f8 | sort | uniq | wc -l
+} done
+"
+"1","ERF_motif_sorted_new.bed
+"
+"1","    1584
+MYB_motif_sorted_new.bed
+"
+"1","    2915
+NAC_motif_sorted_new.bed
+"
+"1","    3369
+RAV_motif_sorted_new.bed
+    1060
+blhl_motif_sorted_new.bed
+     897
+wrky_motif_sorted_new.bed
+"
+"1","    2215
+"

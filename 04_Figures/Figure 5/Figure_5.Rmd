@@ -1,0 +1,68 @@
+---
+title: "Figure_5"
+author: "Brett Hale"
+date: "8/22/2022"
+output: html_document
+---
+
+```{r}
+library(dbplyr)
+library(dplyr)
+library(devtools)
+library(ggplot2)
+```
+
+```{r}
+
+##Plot AT model generalization accuracies 
+
+cross_species_facet <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/cross_species_facet.csv")
+
+
+cross_species_facet$Family = factor(cross_species_facet$Family, levels=c('WRKY', 'MYB', 'NAC'))
+
+
+mycols <- c("aquamarine4", "lemonchiffon1", "khaki3", "burlywood3","lightsteelblue1", "paleturquoise", "aquamarine3")
+
+
+ggplot(cross_species_facet, aes(x=TF_Name, y=PredictionAccuracy, fill = TF_Name)) + 
+  geom_boxplot(aes(alpha = 0.1), color = "black") +
+    geom_dotplot(binaxis='y', stackdir='center')+
+  scale_fill_manual(values = mycols, breaks=c("WRKY30","MYB108", "MYB119", "MYB62", "NAC031", "NAC053", "NAC057")) +
+  facet_grid(. ~ Family, scales = "free", space='free') +
+  theme_classic() +
+  ylim(25, 100) +
+  theme(legend.position = "none", axis.text.x = element_text(size = 16, face = "bold", color = "black"), axis.text.y = element_text(size = 14, color = "black"), 
+        axis.title.x = element_blank(), axis.title.y = element_text(size = 16, face = "bold")) +
+   labs (y = "Prediction Accuracy (%)") +
+theme(strip.background = element_blank(),strip.text.x = element_blank()) +
+  theme(axis.ticks = element_blank()) +
+  theme(panel.background = element_blank(), panel.border = element_rect(fill = NA, linetype = "dashed"))
+
+  
+ggsave("AT_Generalization.png", width = 14, height = 2.5, units = "in", dpi = 600)
+```
+
+```{r}
+##Plot GM model generalization accuracies 
+
+gmmodel_prediction <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/gmmodel_prediction.csv")
+
+
+ggplot(gmmodel_prediction, aes(x = Model, y = Value, fill = Model, label = Value)) +
+  geom_col(color = "black", fill = "darkslateblue", aes(alpha = 0.5)) +
+  facet_wrap(Condition ~.,) +
+  theme(legend.position = "none", axis.text.x = element_blank(), axis.text.y = element_text(size = 14, color = "black"), 
+      axis.title.x = element_blank(), axis.title.y = element_text(size = 16, face = "bold")) +
+        labs(y = "Prediction Accuracy (%)") +
+        theme(axis.ticks = element_blank(), strip.text = element_text(color = "black", face = "bold", size = 16),
+              plot.background = element_rect(fill = "white", color = NA)) +
+        geom_text(size = 8, position = position_stack(vjust = 0.5)) +
+  theme(panel.background = element_blank(), panel.border = element_rect(fill = NA, linetype = "dashed"), 
+        strip.background =element_rect(linetype = "dashed", color = "black"))
+  
+
+ggsave("GM_Prediction.png", width = 10, height = 5, units = "in", dpi = 600)
+
+```
+

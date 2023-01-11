@@ -1,0 +1,10 @@
+"0","DE_summary <- bed %>%"
+"0","  group_by(TF_family, V4) %>%"
+"0","  summarize('DE_matches'=n()) %>%"
+"0","  mutate('mean_DE_matches'=DE_matches/nrow(bed)) %>%"
+"0","  "
+"0","  ungroup() %>%"
+"0","  left_join(random_summary, by=c(""TF_family"", ""V4""))"
+"2","`summarise()` has grouped output by 'TF_family'. You can override using the `.groups` argument."
+"2","Error in is.data.frame(y) : object 'random_summary' not found
+"

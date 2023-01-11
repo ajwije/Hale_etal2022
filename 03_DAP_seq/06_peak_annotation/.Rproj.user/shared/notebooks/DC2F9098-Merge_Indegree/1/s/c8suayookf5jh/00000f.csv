@@ -1,0 +1,5 @@
+"0"," hub_equation <- read.csv(""/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/hub_equation.csv"")
+"
+"2","Warning: cannot open file '/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/hub_equation.csv': No such file or directory"
+"2","Error in file(file, ""rt"") : cannot open the connection
+"

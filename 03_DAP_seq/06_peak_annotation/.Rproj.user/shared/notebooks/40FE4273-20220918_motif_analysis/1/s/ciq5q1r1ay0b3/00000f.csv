@@ -1,0 +1,6 @@
+"0","##emty removed
+meme_enrich_long_emrm <- meme_enrich_long[!apply(meme_enrich_long$value == """", 1, all),]
+"
+"2","Error in apply(meme_enrich_long$value == """", 1, all) : 
+  dim(X) must have a positive length
+"

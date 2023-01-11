@@ -1,0 +1,7 @@
+"0","gene2KEGG_wrkyhubcounts <- RNAseq_data_hubmotif %>%
+  RNAseq_data_hubmotif[RNAseq_data_hubmotif$WRKY30 > 0 || RNAseq_data_hubmotif$WRKY42 > 0, ] 
+"
+"2","Warning: 'length(x) = 1664 > 1' in coercion to 'logical(1)'"
+"2","Warning: 'length(x) = 1664 > 1' in coercion to 'logical(1)'"
+"2","Error in xj[i] : invalid subscript type 'list'
+"

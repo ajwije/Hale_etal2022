@@ -1,0 +1,57 @@
+---
+title: "Hub_analysis_final"
+author: "Brett Hale"
+date: "10/5/2022"
+output: html_document
+---
+
+```{r}
+
+ hub_equation <- read.csv("/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/hub_equation.csv")
+   View(hub_equation)
+   
+ MEMETF_expression_data <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/MEMETF_expression_data.csv", comment.char="#")
+```
+
+```{r}
+library(dbplyr)
+library(devtools)
+library(dplyr)
+library(ggplot2)
+
+```
+
+```{r}
+##merge dataframes to calculate cumulative indegree
+merged <- merge(hub_equation,MEMETF_expression_data,by=c("TF"))
+
+##export merged file
+merged <- read.csv("/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/cumulative_indegree.csv")
+```
+
+```{r}
+
+Indegree_summary <- merged %>%
+  group_by(TF) %>%
+  summarize(min = min(Indegree),
+            q1 = quantile(Indegree, 0.25),
+            median = median(Indegree),
+            sum = sum(Indegree),
+            mean = mean(Indegree),
+            q3 = quantile(Indegree, 0.75),
+            max = max(Indegree))
+
+```
+
+```{r}
+Indegree_sum <- merged %>%
+  group_by(Target) %>%
+  summarize('indegree_sum'=sum(Indegree)) %>%
+  
+  ungroup() %>%
+  left_join(merged)
+
+
+write.csv(Indegree_sum, "/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20221006_Indegree_sum.csv", quote = FALSE)
+```
+

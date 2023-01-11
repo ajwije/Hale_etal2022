@@ -1,0 +1,26 @@
+{
+    "id": "586243EC",
+    "path": "~/Documents/Projects/Soy_RNAseq/20210208_captureseq/20210628_data_analysis/03_DEG_analysis/20210628_captureseq/20221219_analysis.Rmd",
+    "project_path": "20221219_analysis.Rmd",
+    "type": "r_markdown",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1660592932765.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "118,3",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1671753319,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1671753319066,
+    "read_only": false,
+    "read_only_alternatives": []
+}

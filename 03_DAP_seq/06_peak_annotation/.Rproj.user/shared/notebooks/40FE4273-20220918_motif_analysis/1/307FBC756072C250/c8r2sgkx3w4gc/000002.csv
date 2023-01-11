@@ -1,0 +1,3 @@
+"0","cd /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions
+
+sort -k2 20220924_motifs_match.txt | uniq > 20220924_motifs_match_sort.txt"

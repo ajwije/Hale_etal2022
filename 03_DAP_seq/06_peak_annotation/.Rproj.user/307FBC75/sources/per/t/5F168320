@@ -1,0 +1,26 @@
+{
+    "id": "5F168320",
+    "path": "~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/20220609_cluster_analysis.Rmd",
+    "project_path": null,
+    "type": "r_markdown",
+    "hash": "704905115",
+    "contents": "",
+    "dirty": true,
+    "created": 1656348133924.0,
+    "source_on_save": false,
+    "relative_order": 9,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "40,9",
+        "scrollLine": "36"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1661454759,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1664828593808,
+    "read_only": false,
+    "read_only_alternatives": []
+}

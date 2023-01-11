@@ -1,0 +1,38 @@
+---
+title: "Figure_2d"
+author: "Brett Hale"
+date: "7/29/2022"
+output: html_document
+---
+
+```{r}
+library(dbplyr)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(devtools)
+library(viridis)
+```
+
+
+```{r}
+ggplot(transcriptome_heatmap, aes(x = FC_Type, y = geneId, fill = FC)) +
+  facet_grid(cluster ~ FC_Type, switch = "y") +
+ geom_tile(width=300,height=1000) +
+   theme(axis.title = element_blank()) +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_blank(), axis.text.y = element_blank()) +
+  theme(axis.ticks = element_blank()) + 
+  theme(strip.background = element_blank(), strip.text = element_text(color = "black", face = "bold")) +
+  scale_fill_gradient2(
+  low = ("blue"),
+  mid = "white",
+  high = ("red"),
+  midpoint = 0) +
+  theme(panel.border = element_rect(color =  "black", fill =  NA))
+
+ggsave("transcriptome_heatmap3.png", width = 2, height = 12, units = "in", dpi = 600)
+```
+
+
+

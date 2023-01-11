@@ -1,0 +1,4 @@
+"0","cd /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/
+cat all_motif_sorted_new.bed | cut -f8 | sort | uniq | wc -l "
+"1","    5505
+"

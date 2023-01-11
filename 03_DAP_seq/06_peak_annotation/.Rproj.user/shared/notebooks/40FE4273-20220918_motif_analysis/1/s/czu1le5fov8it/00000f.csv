@@ -1,0 +1,1 @@
+"0","bed$TF_family <- gsub('[[:digit:]]+', '', bed$V4)"

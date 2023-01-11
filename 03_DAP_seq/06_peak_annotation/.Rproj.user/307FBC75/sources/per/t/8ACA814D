@@ -1,0 +1,27 @@
+{
+    "id": "8ACA814D",
+    "path": "~/Documents/Projects/Soy_RNAseq/DAPseq/200617_DAPseq_data_analysis/06_peak_annotation/peak_anno.r",
+    "project_path": "peak_anno.r",
+    "type": "r_source",
+    "hash": "3727337697",
+    "contents": "",
+    "dirty": false,
+    "created": 1650656589228.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "48,0",
+        "scrollLine": "39"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1663533957,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1663533957606,
+    "read_only": false,
+    "read_only_alternatives": []
+}

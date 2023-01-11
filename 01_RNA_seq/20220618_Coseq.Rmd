@@ -1,0 +1,82 @@
+---
+title: "20220618_coseq"
+author: "Asela Wijeratne"
+date: '2022-06-18'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(coseq)
+library(Biobase)
+library(corrplot)
+```
+
+
+```{r}
+
+###entire normalized expression matrix
+corrected_data <- read.csv("20220304_corrected_data.csv", row.names = "X")
+
+
+DE_DEseq_norm <- read.csv("20220401_DE_DEseq_norm.csv", row.names = "X")
+DE_DEseq_row <- corrected_data[DE_DEseq_norm$geneId, ]
+DE_DEseq_row <- DE_DEseq_row[match(names(DE_DEseq_norm)[2:14], colnames(DE_DEseq_row))]
+head(DE_DEseq_row)
+```
+
+
+
+################################clustering
+
+```{r}
+
+
+DEseq_CLR <- coseq(DE_DEseq_row, K=2:25, transformation= "clr",norm="TMM",
+                         meanFilterCutoff=0, model="kmeans", seed = 1)
+trt <- c(rep("Race1", 2), rep("mock", 3), rep("Race25", 2), rep("Race1", 2), rep("mock", 1), rep("Race25", 3))
+
+plot(DEseq_CLR, graphs="boxplots", conds=trt, profiles_order =sort(unique(clusters(DEseq_CLR)), decreasing=TRUE), collapse_reps= "average")
+
+p <- plot(DEseq_CLR, graphs="boxplots", conds=trt, profiles_order =sort(unique(clusters(DEseq_CLR)), decreasing=TRUE), collapse_reps= "average")
+summary(DEseq_CLR)
+
+
+probapost <- data.frame(assay(DEseq_CLR))
+probapost[probapost <= 0.85 ]=0
+head(probapost)
+write.csv(probapost, "Data/tables/20220620_coseq_clustertable.cvs")
+colSums(probapost)
+DEseq_CLR_coseqtr <- data.frame(tcounts(DEseq_CLR))
+
+head(DEseq_CLR_coseqtr)
+saveRDS(p, 'Data/rds_files/20220620_coseq_fig.rds')
+```
+###convert clusters and gene names into long format. 
+```{r}
+list_of_frames <- replicate(ncol(probapost), data.frame())
+for (i in 1: ncol(probapost))
+{print (i)
+  gene_names <- row.names(probapost[probapost[, i]> 0, ])
+  print(length(gene_names))
+  cluster_num <- rep(as.character(paste("cluster",  as.character(i), sep = "")), length(gene_names))
+  df <- data.frame(gene_names, cluster_num)
+  
+  # create a new data frame called new_dataframe
+  list_of_frames[[i]] <- df
+}
+
+
+Merge_cluster_df <- do.call(rbind, list_of_frames)
+head(Merge_cluster_df)
+```
+
+###merge long cluter table with transformed count tables
+
+```{r}
+DEseq_CLR_coseqtr_cluster <- merge(DEseq_CLR_coseqtr, Merge_cluster_df, by.x = 'row.names', by.y = "gene_names")
+
+head(DEseq_CLR_coseqtr_cluster)
+
+saveRDS(DEseq_CLR_coseqtr_cluster, 'Data/rds_files/20220620_clusters_tr_data.rds')
+```
+

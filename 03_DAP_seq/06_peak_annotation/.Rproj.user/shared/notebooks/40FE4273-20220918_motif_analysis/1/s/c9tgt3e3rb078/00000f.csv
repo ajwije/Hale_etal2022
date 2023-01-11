@@ -1,0 +1,4 @@
+"0","bed %>%"
+"0","  count(V4, TF_family) %>%"
+"0","  group_by(TF_family) %>%          # now required with changes to dplyr::count()"
+"0","  mutate(prop = prop.table(n))"

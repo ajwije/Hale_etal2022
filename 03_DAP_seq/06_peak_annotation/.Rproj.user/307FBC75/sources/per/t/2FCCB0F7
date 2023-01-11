@@ -1,0 +1,27 @@
+{
+    "id": "2FCCB0F7",
+    "path": "~/Documents/Projects/Soy_RNAseq/DAPseq/200617_DAPseq_data_analysis/06_peak_annotation/20220918_motif_analysis.Rmd",
+    "project_path": "20220918_motif_analysis.Rmd",
+    "type": "r_markdown",
+    "hash": "2221965223",
+    "contents": "",
+    "dirty": false,
+    "created": 1663533999538.0,
+    "source_on_save": false,
+    "relative_order": 6,
+    "properties": {
+        "tempName": "Untitled2",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "389,0",
+        "scrollLine": "386"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1666812379,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1666812380177,
+    "read_only": false,
+    "read_only_alternatives": []
+}

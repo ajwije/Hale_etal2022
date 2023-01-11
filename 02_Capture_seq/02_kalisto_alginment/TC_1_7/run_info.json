@@ -1,0 +1,13 @@
+{
+	"n_targets": 52872,
+	"n_bootstraps": 0,
+	"n_processed": 1067169,
+	"n_pseudoaligned": 1044934,
+	"n_unique": 1035882,
+	"p_pseudoaligned": 97.9,
+	"p_unique": 97.1,
+	"kallisto_version": "0.48.0",
+	"index_version": 10,
+	"start_time": "Mon Dec 19 20:45:59 2022",
+	"call": "kallisto quant -i /home/awijeratne/Projects/capture_seq/Transcript_ref_V3/Gmax_508_Wm82.a4.v1.transcript_primaryTranscriptOnly.idx -o /home/awijeratne/Projects/capture_seq/03_kalisto_alginment/TC_1_7 /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_7_bb_trim_R1.fastq /home/awijeratne/Projects/capture_seq/01_Preproprocessing/01_Preproprocessing/BB_Adapter_Removed/TC_1_7_bb_trim_R2.fastq"
+}

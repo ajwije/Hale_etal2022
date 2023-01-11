@@ -1,0 +1,432 @@
+---
+title: "20220918_binding_motifs"
+author: "Asela Wijeratne"
+date: "2022-09-18"
+output: html_document
+---
+```{r}
+library(stringr)
+library(dplyr)
+library(tidyverse)
+library(stringr)
+library(ggplot2)
+library(tidytext)
+library("xlsx")
+```
+
+
+
+```{bash}
+cd /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/Random_set
+
+wc -l *.bed
+```
+```{bash}
+cd /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/DE_set
+wc -l *.bed
+```
+
+```{bash}
+cd /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/
+cat all_motif_sorted_new.bed | cut -f8 | sort | uniq | wc -l 
+```
+```{bash} 
+cd /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/DE_set
+for i in ERF MYB NAC RAV blhl wrky
+do {
+echo ${i}_motif_sorted_new.bed
+cat ${i}_motif_sorted_new.bed | cut -f8 | sort | uniq | wc -l
+} done
+
+```
+
+
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(rstatix)
+```
+
+
+
+```{r}
+file_loc <- "/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites"
+
+bed <- read.table("/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/all_motif_sorted_new.bed",header = FALSE, sep="\t",stringsAsFactors=FALSE, quote="")
+```
+
+###remove numbers from motidfs to assign to a family
+
+```{r}
+bed$TF_family <- gsub('[[:digit:]]+', '', bed$V4)
+```
+
+
+##freq of each motif
+
+```{r}
+bed %>%
+  count(V4, TF_family) %>%
+  group_by(TF_family) %>%          # now required with changes to dplyr::count()
+  mutate(prop = prop.table(n))
+
+```
+
+```{r}
+dup_rem_motifs <- bed %>% 
+  # Base the removal on the "Age" column
+  distinct(V4, V8, .keep_all = TRUE)
+```
+
+
+#freq of motifs after removing the same motifs present more than once on a promoters
+
+
+```{r}
+freq_tf_motifs <- bed %>%
+  count(V4, TF_family) %>%
+  group_by(TF_family) %>%          # now required with changes to dplyr::count()
+  mutate(prop = prop.table(n))
+
+#write.csv(freq_tf_motifs, paste(file_loc, "20220918_freq_tf_motifs.csv", sep = ""))
+
+head(freq_tf_motifs)
+```
+
+# Read FIMO scans random promoters & compute background average matches
+
+```{r}
+file_loc <- "/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/"
+random_path <- "/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/Random_set/"
+random_bed <- read.table(paste(random_path, "all_randmotif_sorted_new.bed", sep = ""),header = FALSE, sep="\t",stringsAsFactors=FALSE, quote="")
+
+random_bed$TF_family <- gsub('[[:digit:]]+', '', random_bed$V4)
+```
+
+
+```{r}
+random_summary <- random_bed %>%
+  group_by(TF_family, V4) %>%
+  summarize('random_matches'=n()) %>%
+  mutate('mean_bg_matches'=random_matches/nrow(random_bed)) %>%
+  
+  ungroup()
+```
+```{r}
+DE_summary <- bed %>%
+  group_by(TF_family, V4) %>%
+  summarize('DE_matches'=n()) %>%
+  mutate('mean_DE_matches'=DE_matches/nrow(bed)) %>%
+  
+  ungroup() %>%
+  left_join(random_summary, by=c("TF_family", "V4"))
+
+```
+```{r}
+write.csv(DE_summary, paste(file_loc, "20220921_freq_tf_motifs.csv", sep = ""))
+```
+
+
+```{r}
+DE_summary[is.na(DE_summary)] <- 0
+
+tab_fis_complete <- DE_summary %>%
+      column_to_rownames(var="V4") %>%
+      dplyr::select(DE_matches, random_matches) %>%
+      as.matrix(labels = TRUE) %>%
+  row_wise_fisher_test() %>%
+  left_join(DE_summary, by = c("group" = "V4"))
+
+write.csv(tab_fis_complete, paste(file_loc, "20220921_tab_fis_complete.csv", sep = ""))
+```
+
+```{r}
+fisher_DE_Rand_split <-  DE_summary %>%
+  
+  dplyr::select(TF_family, DE_matches, random_matches, V4) %>%
+  dplyr::group_split(TF_family)
+  
+
+
+```
+
+
+```{r}
+Fisher_list_of_frames <- replicate(length(fisher_DE_Rand_split), data.frame())
+
+
+# the use of for loop to perfom go enrichment analysis for each cluster 
+for (i in 1: length(Fisher_list_of_frames))
+{print (i)
+  family_df <- as.data.frame(fisher_DE_Rand_split[[i]])
+  print(nrow(family_df))
+  rownames(family_df) <- family_df$V4
+  family_df_mt <- as.matrix(family_df[,c(2,3)], labels = TRUE)
+  # create a new data frame called new_dataframe
+  Fisher_list_of_frames[[i]] <- row_wise_fisher_test(family_df_mt)
+}
+
+fisher_family <- Fisher_list_of_frames %>% do.call("rbind", .) %>%
+   left_join(DE_summary, by = c("group" = "V4"))
+
+write.csv(fisher_family, paste(file_loc, "20220921_fisher_family.csv", sep = ""))
+```
+
+###getting the common name and gene ID.
+
+```{bash}
+cd /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions
+
+
+cut -f2,3 gene_association.tair | sort | uniq >> geneid_cname.txt
+
+wc -l geneid_cname.txt
+
+```
+```{r}
+geneid_cname <- read.delim("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/geneid_cname.txt", header=FALSE)
+
+motifs <- read.table("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20220924_motifs.txt", quote="\"", comment.char="")
+
+
+motif_geneid <- merge(geneid_cname, motifs, by.x = "V2", by.y = "V1",
+                      all.y = TRUE)
+
+```
+
+
+
+
+###
+```{python}
+import os
+
+file_loc = "/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions" # change this to your input file location
+tair_gene_loc = "gene_association.tair"
+##motifs after enrichment analysis from SEA in MEME
+motifs_loc = "20220924_motifs.txt"
+out_file = open(file_loc + "/" + "20220924_motifs_match.txt", 'w')
+out_file_notFound = open(file_loc + "/" + "20220924_motifs_no_match.txt", 'w')
+####read files
+
+
+
+id_set = set()
+no_match = set()
+
+with open(file_loc + "/" + tair_gene_loc , 'r') as rfile:
+  for line in rfile:
+    cols = line.split("\t") 
+    gene_id = cols[1] # column 1: node name
+    common_name = cols[2] # column 2: position
+    gene_id_common_name = gene_id + "\t" + common_name
+    id_set.add(gene_id_common_name) # node_list dictionary keeps 
+
+id_list = list(id_set)
+
+with open(file_loc + "/" + motifs_loc , 'r') as motif_file:
+  for motif in motif_file:
+    for names in id_list:
+      common_name = names.split("\t")[1]
+      if motif.strip("\n") in common_name:
+        out_file.write(names + "\n")
+      else:
+        no_match.add(motif)
+no_match_list = list(no_match)
+for no_match in no_match_list:
+  out_file_notFound.write(no_match + "\n")
+  
+
+```
+
+
+###get Gm genes for WRKY common name
+
+```{python}
+import os
+gff_file_loc = "/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Gmax_508_Wm82.a4.v1.annotation_info.txt"
+file_loc = "/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions" # change this to your input file location
+motifs_loc = "20220924_motifs.txt"
+wrky_out_file = open(file_loc + "/" + "20220928_WRKY_match.txt", 'w')
+wrky_out_file_notFound = open(file_loc + "/" + "20220928_wrky_no_match.txt", 'w')
+####read files
+wrky_set = set()
+wrkyno_match = []
+
+with open(file_loc + "/" + motifs_loc , 'r') as motif_file:
+  for motif in motif_file:
+    if "WRKY" in motif:
+      wrky_set.add(motif) # node_list dictionary keeps 
+
+wrky_list = list(wrky_set)
+
+
+with open(gff_file_loc , 'r') as gff_files:
+  for gff_lines in gff_files:
+    gff_split = gff_lines.split("\t") 
+    gm_gene_id = gff_split[1] 
+    At_geneID = gff_split[10] 
+    At_common_name = gff_split[11]
+    Gmgene_id_common_name = gm_gene_id + "\t" + At_geneID + "\t" + At_common_name
+
+    for wrky_names in wrky_list:
+      Atcommon_name = Gmgene_id_common_name.split("\t")[2]
+      if wrky_names.strip("\n") in gff_lines:
+        wrky_out_file.write(Gmgene_id_common_name + "\n")
+      else:
+        wrkyno_match.append(wrky_names)
+
+for wrky_no_match in wrkyno_match:
+  wrky_out_file_notFound.write(wrky_no_match)
+
+
+
+```
+
+
+
+###sort and remove redundant from motif-commmon name file
+
+```{bash}
+cd /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions
+
+sort -k2 20220924_motifs_match.txt | uniq > 20220924_motifs_match_sort.txt
+```
+
+```{bash}
+ 
+head /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20220924_motifs.txt
+```
+
+###combine enrich motifs with motif freq 
+
+```{r}
+###read enrich motifs
+MEME_enrich <- read.delim("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20221002_MEME_enrich.txt")
+
+
+tf_motif_freq_enrich <- MEME_enrich  %>%
+  select(RANK:ID.1) %>%
+  right_join(freq_tf_motifs, by = c("ALT_ID" = "V4"))
+write.csv(tf_motif_freq_enrich, "/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/20221005_tf_motif_freq_enrich.csv", quote = FALSE)
+```
+
+
+```
+##this doesnot work. Sandaruwan converted the MEME_enrich file into long format. 
+long_MEME_enrich <- MEME_enrich %>% 
+  select(ALT_ID, ID.1, Ortholog:X.34) %>%
+  gather(col_names, Gm_Ortholog, Ortholog:X.34)
+
+write.csv(long_MEME_enrich, "/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/20221005_long_MEME_enrich.csv", quote = FALSE)
+```
+
+```{r}
+meme_enrich_long <- read.delim("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20221007_meme_enrich_long.csv")
+
+##empty removed
+meme_enrich_long_emrm <- meme_enrich_long %>% mutate(value=na_if(value, "")) %>% na.omit()
+
+##remove any white space in id column
+meme_enrich_long_emrm$GmID <- gsub(" ", "", meme_enrich_long_emrm$value) 
+```
+
+
+###combine TF data with expression data
+
+```{r}
+DEseq_norm_all <- read.csv("/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/20220401_DEseq_norm_bothbatch_all.csv")
+MEMETF_expression_data <- meme_enrich_long_emrm %>%
+  left_join(DEseq_norm_all, by = c("GmID" = "geneId")) %>%
+  
+  left_join(tf_motif_freq_enrich, by = c("ALT_ID" = "ALT_ID"))
+  #na.omit()
+
+
+
+write.csv(MEMETF_expression_data, "~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20221007_MEMETF_expression_data.csv", quote = FALSE)
+```
+###combining annotation and hubgenes
+```{r}
+Gmax_508_Wm82.a4.v1.annotation_info <- read.delim("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Gmax_508_Wm82.a4.v1.annotation_info.txt", header=FALSE)
+
+hubgenes <- read.delim("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20221014_hubgenes.txt")
+
+hubgenes_anno <- merge(hubgenes, Gmax_508_Wm82.a4.v1.annotation_info, by.x = "GmID", by.y = "V2", 
+all.x =TRUE)
+write.csv(hubgenes_anno, "~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20221014_hubgenes_anno.csv", quote = FALSE)
+```
+
+
+###combine hubgenes with other expression data. Removed all the motif preditions from 20221008_RNAseq_data_newBinding file on 10/15/2022 and created a new file: 20221014_RNAseq_data_newBinding.csv
+
+```{r}
+RNAseq_data_newBinding <- read.csv("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Data/tables/ 20221014_RNAseq_data_newBinding.csv")
+
+
+RNAseq_data_newBinding_hub <- merge(hubgenes, RNAseq_data_newBinding, by.x = "GmID", by.y = "geneId", all.x = TRUE)
+
+write.csv(RNAseq_data_newBinding_hub, "~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20221014_RNAseq_data_newBinding_hub.csv", quote = FALSE)
+```
+
+
+###summarize the binding sites for each genes and combine it with expression data
+
+```{r}
+freq_motifs_gene <- bed %>%
+  count(V8, V4) %>%
+  group_by(V8) %>%
+  spread(V4, n)
+
+
+RNAseq_data_motif_pred <- merge(RNAseq_data_newBinding, freq_motifs_gene, by.x = "geneId", by.y = "V8", all.x = TRUE)
+
+
+write.xlsx(RNAseq_data_motif_pred, "~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Data/tables/20221019_RNAseq_data_motif.xlsx", sheetName = "expression", append = FALSE)
+
+write_csv(RNAseq_data_motif_pred, "~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Data/tables/20221019_RNAseq_data_motif.csv")
+
+```
+
+
+```{r}
+
+hub_motif <- unique(sort(hubgenes$TF))
+
+hub_targets <- bed[bed$V4 %in% hub_motif, ]
+
+target_freq <- hub_targets %>%
+  count(V8, V4) %>%
+  group_by(V8) %>%
+  spread(V4, n)
+RNAseq_data_hubmotif <- merge(RNAseq_data_newBinding, target_freq, by.x = "geneId", by.y = "V8")
+
+
+RNAseq_data_hubmotif %>%
+  count(cluster_num)
+
+RNAseq_data_newBinding %>%
+  count(cluster_num)
+
+
+gene2KEGG_hubcounts <- RNAseq_data_hubmotif %>%
+  count(gene2KEGG)
+
+
+gene2KEGG_wrkyhubcounts <- RNAseq_data_hubmotif %>%
+  filter(WRKY30 > 0 | WRKY42 > 0) 
+
+hubtarget_TF <- RNAseq_data_hubmotif %>%
+  count(Family)
+
+write.xlsx(RNAseq_data_hubmotif, "~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20221017_RNAseq_data_hubmotif.xlsx", sheetName = "hub_target_expression", append = FALSE)
+
+write.xlsx(gene2KEGG_hubcounts, "~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20221017_RNAseq_data_hubmotif.xlsx", sheetName = "gene2KEGG_hubcounts", append = TRUE)
+
+write.xlsx(hubtarget_TF, "~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/08_fimo_scan/Motif_regions/20221017_RNAseq_data_hubmotif.xlsx", sheetName = "hubtarget_TF", append = TRUE)
+
+```
+
+
+

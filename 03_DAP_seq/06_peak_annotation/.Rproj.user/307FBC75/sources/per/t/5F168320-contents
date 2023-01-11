@@ -1,0 +1,619 @@
+---
+title: "GO analysis"
+author: "Asela Wijeratne"
+date: '2022-06-08'
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r}
+library(stringr)
+library("RColorBrewer")
+library("pheatmap")
+#library(tximport)
+#library(DESeq2)
+library(dplyr)
+library("ggbeeswarm")
+library("pheatmap")
+library(ggplot2)
+library(edgeR)
+library(reshape2)
+#library("sva")
+library("gridExtra")
+library(ggvenn)
+library(rlist)
+library(dplyr)
+library(tidyverse)
+#library(ComplexHeatmap)
+library(circlize)
+#library(topGO)
+library(biomaRt)
+#library("systemPipeR")
+#library("BioNERO")
+library(stringr)
+library(ggplot2)
+library(tidytext)
+#library(mgsa)
+#library(GSEABase)
+#library(ggvenn)
+#library(UpSetR)
+#library("CEMiTool")
+#library(coseq)
+
+```
+
+### getting data
+
+```{r}
+##all genes with differentially expressed genes labelled
+DEseq_norm_all <- read.csv("../20220401_DEseq_norm_bothbatch_all.csv", row.names = "geneId")
+#differentially expressed genes 
+DEseq_norm_lin_TF <-read.csv("20220617_DEseq_norm_lin_TF.csv")
+DE_DEseq_row <- corrected_data[DE_DEseq_norm$geneId, ]
+head(DE_DEseq_norm)
+colnames(DE_DEseq_norm)
+##Lin DE genes done by Brett
+linDE <- read.csv("20220614_DE_Linetal.csv", row.names = "X")
+
+### overlap with our data and Lin data
+
+DEseq_norm_all_lin <- read.csv("20220614_Overlap_with_Linetal.csv", row.names = "X")
+
+
+head(DEseq_norm_all_lin)
+###TF data for soybean and remove gene duplicates
+TF_List <- read.csv("Gma_TF_list.txt", sep = "\t")
+TF_List <- TF_List[!duplicated(TF_List$Gene_ID), ]
+TF_List[TF_List$Gene_ID == "Glyma.01G053800", ]
+write.csv(TF_List, "20220624_Gma_TF_list_nonredundant.csv")
+```
+
+##cluster differentially expressed genes using Coseq
+################################clustering ###Performed using
+`20220609_cluster_analysis.Rmd` ###reading data into this workbook
+
+```{r}
+
+
+DEseq_CLR_coseqtr_cluster <- readRDS('Data/rds_files/20220620_clusters_tr_data.rds')
+
+```
+
+## merge expression data with cluster numbers and TF
+
+```{r}
+#select genes names and clusters from ```DEseq_CLR_coseqtr_cluster```
+Merge_cluster_df <- DEseq_CLR_coseqtr_cluster [,c("Row.names", "cluster_num") ]
+#merge TF and count data
+DEseq_norm_lin_TF <- merge(DEseq_norm_all_lin, TF_List, by.x = "geneId", 
+                           by.y = "Gene_ID", all.x =TRUE)
+#merge count data and clusters
+DEseq_norm_lin_TF <- merge(DEseq_norm_lin_TF, Merge_cluster_df, by.x = "geneId", 
+                           by.y = "Row.names", all.x =TRUE)
+
+GMRav_DAP <- "Glyma.10G204400"
+GMWrky_DAP <- "Glyma.06G125600" 
+GmERF113 <- "Glyma.16G047600"
+GmPUB1_2 <- c("Glyma.13G312700", "Glyma.12g189000")
+
+GmBiP2 <- "Glyma.08G025900"
+GmBiP1 <- "Glyma.08G025700"
+GmBiP3 <- "Glyma.05g219600"
+GmBiP4 <- "Glyma.05g219400"
+WRKY40 <- c("Glyma.08G143400","Glyma.04G061300","Glyma.04G061400","Glyma.06G061900","Glyma.06G062000") 
+JZ5 <- "Glyma.16G010000"
+DEseq_norm_all[c(GmBiP1,GmBiP2, GmBiP3,GmBiP4), ]
+DEseq_norm_lin_TF[DEseq_norm_lin_TF$geneId == 	"Glyma.10G142200", ]
+DEseq_norm_lin_TF[DEseq_norm_lin_TF$geneId %in% c(GmBiP1,GmBiP2, GmBiP3,GmBiP4), ]
+#write_csv(DEseq_norm_lin_TF, "Data/tables/20220621_DEseq_norm_lin_TF.cvs")
+tf_freq <- table(DEseq_norm_lin_TF[, 26])
+
+DEseq_norm_ex <- DEseq_norm_lin_TF[DEseq_norm_lin_TF$linetaldf == "", ]
+table(DEseq_norm_ex[, 27])
+linDE[GmPUB1_2, ]
+
+```
+###TF propotion difference
+```{r}
+DE_TF <- data.frame(DE_freq = tf_freq)
+DE_TF$DE_per <- (DE_TF$DE_freq.Freq/sum(DE_TF$DE_freq.Freq))*100
+
+genome_TF <- data.frame(table(TF_List$Family))
+genome_DE_TF <- merge(DE_TF, genome_TF, by.x = "DE_freq.Var1", by.y = "Var1")
+genome_DE_TF$genome_per <- (genome_DE_TF$Freq/sum(genome_DE_TF$Freq))*100
+#res <- prop.test(x = c(447, 3747), n = c(6052, 52872), alternative = "greater")
+genome_DE_TF %>%
+  rowwise %>% 
+  mutate(prop_out = list(prop.test(x = c(DE_freq.Freq, Freq), n = rep(c(447, 3747), nrow(genome_DE_TF))))) %>% 
+           ungroup
+ 
+genome_DE_TF[order(genome_DE_TF$DE_freq.Freq, decreasing = TRUE), ]           
+    
+    
+```
+
+###Z test for TF familes
+```{r}
+#wrky
+res_wrky <- prop.test(x = c(65, 185), n = c(447, 3747), alternative = "greater")
+res_erf <- prop.test(x = c(56, 301), n = c(447, 3747), alternative = "greater")
+res_hsf <- prop.test(x = c(12, 52), n = c(447, 3747), alternative = "greater")
+res_CAMTA <- prop.test(x = c(6, 15), n = c(447, 3747), alternative = "greater")
+res_RAV <- prop.test(x = c(3, 5), n = c(447, 3747), alternative = "greater")
+
+```
+
+
+
+###importing new GO terms and processing
+
+    #############Clusterprofile##########
+
+    Glycine_max_JGI_Wm82.a4.v1.cleaned <- read.delim("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Glycine_max_JGI_Wm82.a4.v1.cleaned.gaf")
+    colnames(Glycine_max_JGI_Wm82.a4.v1.cleaned) <- c("geneID", "GOID", "Category")
+
+    Glycine_max_JGI_Wm82.a4.v1.cleaned$geneID <- Glycine_max_JGI_Wm82.a4.v1.cleaned$geneID %>% str_replace(".Wm82.a4.v1", "")
+
+    Glycine_max_JGI_Wm82.a4.v1.cleaned$Category <- NULL
+    gene.go <- Glycine_max_JGI_Wm82.a4.v1.cleaned[which(Glycine_max_JGI_Wm82.a4.v1.cleaned$GOID != ""),] # take out genes without GO terms
+    gene2GO <- tapply(gene.go$GOID, gene.go$geneID, function(x)x)
+
+    saveRDS(gene2GO, 'Data/rds_files/20220620_gene2GO.rds')
+    head(gene2GO)
+
+###function to perform enrichment for each cluster
+
+```{r}
+GO_enrichment <- function(count_table, cluster_table, cluterNum, p_cutoff=0.05, gene2GO, ontology = "BP"){
+  cluster <- cluster_table %>% filter(cluster_table[,cluterNum] >= 0.90)
+  cluster_2_rownames <- row.names(cluster)
+  cluster2_List <- unlist(as.integer(row.names(count_table) %in% cluster_2_rownames))
+  names(cluster2_List) <- row.names(count_table)
+  print(table(cluster2_List))
+  GOdata_cluster2 <- new("topGOdata",ontology = ontology,  allGenes = cluster2_List, geneSelectionFun = function(x)(x == 1),  
+                         annot = annFUN.gene2GO, gene2GO = gene2GO, nodeSize = 2)
+  resultKS_cluster2 <- runTest(GOdata_cluster2, algorithm = "elim", statistic = "fisher")
+  tab_cluster2 <- GenTable(GOdata_cluster2, raw.p.value = resultKS_cluster2, topNodes = length(resultKS_cluster2@score), numChar = 120)
+  
+  #tab_cluster2 <- tab_cluster2[tab_cluster2$raw.p.value <= p_cutoff, ]
+  tab_cluster2 <- tab_cluster2[, c(1, 2, 6)]
+  tab_cluster2 <- tab_cluster2 %>% unite("GOterms", GO.ID:Term, remove = TRUE)
+  new_colname <- as.character(paste("p.value_cluster",  as.character(cluterNum), sep = ""))
+  print(new_colname)
+  names(tab_cluster2)[names(tab_cluster2) == "raw.p.value"] <- new_colname
+  #tab_cluster2, <- tab_cluster2 %>% rename(new_colname = raw.p.value)
+  
+  return(tab_cluster2)
+  
+}
+
+```
+
+###perform the GO enrichment BP
+
+```{r}
+##getting GO terms
+gene2GO <- readRDS('Data/rds_files/20220620_gene2GO.rds')
+
+##getting cluster table
+probapost <- read.csv("Data/tables/20220620_coseq_clustertable.cvs", row.names = "X")
+##create list of dataframes for the numbers of clusters
+list_of_frames <- replicate(ncol(probapost), data.frame())
+
+
+# the use of for loop to perfom go enrichment analysis for each cluster 
+for (i in 1: ncol(probapost))
+{print (i)
+  clusteri_GO <- GO_enrichment(DEseq_norm_all, probapost, i, p_cutoff=0.05, gene2GO, ontology = "BP")
+  # create a new data frame called new_dataframe
+  list_of_frames[[i]] <- clusteri_GO
+}
+
+###merge enrichment into one dataframe 
+Merge_GO_enrichment <- list_of_frames%>% reduce(full_join, by = "GOterms")
+
+row.names(Merge_GO_enrichment) <- Merge_GO_enrichment$GOterms
+Merge_GO_enrichment$GOterms <- NULL
+
+Merge_GO_enrichment_sig <- Merge_GO_enrichment %>% filter_at(vars(1:9), any_vars(. < 0.05))
+Merge_GO_enrichment_sig
+
+write.csv(Merge_GO_enrichment_sig, "Data/tables/20220620_Merge_GOBP_enrichment_sig.csv")
+```
+
+###MF ###perform the GO enrichment BP
+
+```{r}
+
+list_of_framesMF <- replicate(ncol(probapost), data.frame())
+
+
+# the use of for loop to perfom go enrichment analysis for each cluster 
+for (i in 1: ncol(probapost))
+{print (i)
+  clusteri_GO <- GO_enrichment(DEseq_norm_all, probapost, i, p_cutoff=0.05, gene2GO, ontology = "MF")
+  # create a new data frame called new_dataframe
+  list_of_framesMF[[i]] <- clusteri_GO
+}
+
+###merge enrichment into one dataframe 
+Merge_MFGO_enrichment <- list_of_framesMF%>% reduce(full_join, by = "GOterms")
+
+row.names(Merge_MFGO_enrichment) <- Merge_MFGO_enrichment$GOterms
+Merge_MFGO_enrichment$GOterms <- NULL
+
+Merge_MFGO_enrichment_sig <- Merge_MFGO_enrichment %>% filter_at(vars(1:9), any_vars(. < 0.05))
+head(Merge_MFGO_enrichment_sig)
+
+write.csv(Merge_MFGO_enrichment_sig, "Data/tables/20220621_Merge_MFGO_enrichment_sig.csv")
+```
+
+###make GO term BP top 10 most enriched GO terms for each cluster
+
+```{r}
+list_GOdf <- replicate(length(list_of_frames), data.frame())
+
+for (i in 1:length(list_of_frames))
+{print(i)
+  cluster_df <- paste("clusterGO", i, sep = "_")
+  print(head(cluster_df))
+  #cluster_df <- list_of_frames[[as.numeric(i)]] 
+  cluster_df <- list_of_frames[[as.numeric(i)]] %>% 
+    mutate('p_value'=-log(as.numeric(list_of_frames[[i]][,2]), base=10)) %>% 
+    slice_min(order_by= as.numeric(list_of_frames[[as.numeric(i)]][,2]), n=10, with_ties=F)
+  colnames(cluster_df)<- c("GO_term", "p.value_cluster", "Log_pvalue")
+  
+   list_GOdf[[i]] <- cluster_df     
+}
+```
+###Figures for BP
+```{r}
+for (i in 1:length(list_GOdf)){
+  cluster_plot <- paste("cluster_plot", i, sep = "_")
+  cluster_plot_file <- paste("cluster_plot", i, sep = "_")
+    # create a new data frame called new_dataframe
+  cluster_plot <- ggplot(list_GOdf[[i]], aes(x=fct_reorder(GOterms, p_value), y=p_value)) +
+    geom_col(fill='darkgreen', alpha=.5) +
+    geom_text(aes(label=GOterms, y=0.1), hjust=0, col='black') +
+    
+    coord_flip() + cowplot::theme_cowplot() +
+    theme(axis.text.y=element_blank()) + theme(aspect.ratio=.3) +
+    scale_y_continuous(expand=c(0, 0)) +
+    labs(x='Top10 GO terms', y='')
+  
+  ggsave(paste("Data/fig/", cluster_plot_file,".png", sep=""), plot = cluster_plot)
+}
+
+
+
+```
+
+### merge BP dataframes in the lsit
+```{r}
+GO_BP_df <- bind_rows(list_GOdf, .id="cluster")
+GO_BP_df$order <- row.names(GO_BP_df)
+```
+
+### create a facet plot BP function
+
+```{r}
+cluster_plot <- ggplot(GO_BP_df, aes(reorder_within(GO_term, Log_pvalue, order), y=Log_pvalue))+
+  
+  coord_flip() + cowplot::theme_cowplot() + geom_col(fill='darkgreen', alpha=.5) +
+  geom_text(aes(label=GO_term, y=0.1), hjust=0, col='black') +
+  theme(aspect.ratio=.3)  +
+  labs(x='Top10 GO terms', y='')
+
+cluster_plot <- cluster_plot + facet_grid(vars(cluster), scales = "free_y") + theme(axis.text.y =element_text(angle=90), axis.text.x = element_blank()) +
+  scale_y_reordered()
+
+
+
+ggsave("Data/fig/20220729_topGOterms.png", plot = cluster_plot, dpi = 600, width = 8, height = 20)
+```
+
+
+
+###make GO term MF top 10 most enriched GO terms for each cluster
+
+```{r}
+list_MFGOdf <- replicate(length(list_of_framesMF), data.frame())
+
+for (i in 1:length(list_of_framesMF))
+{print(i)
+  cluster_df <- paste("clusterGO", i, sep = "_")
+  print(head(cluster_df))
+  #cluster_df <- list_of_frames[[as.numeric(i)]] 
+  cluster_df <- list_of_framesMF[[as.numeric(i)]] %>% 
+    mutate('p_value'=-log(as.numeric(list_of_framesMF[[i]][,2]), base=10)) %>% 
+    slice_min(order_by= as.numeric(list_of_framesMF[[as.numeric(i)]][,2]), n=10, with_ties=F)
+   list_MFGOdf[[i]] <- cluster_df     
+}
+```
+###MF GO term figures
+```{r}
+for (i in 1:length(list_MFGOdf)){
+  cluster_plot <- paste("cluster_plot", i, sep = "_")
+  cluster_plot_file <- paste("cluster_plot_MF", i, sep = "_")
+    # create a new data frame called new_dataframe
+  cluster_plot <- ggplot(list_MFGOdf[[i]], aes(x=fct_reorder(GOterms, p_value), y=p_value)) +
+    geom_col(fill='red3', alpha=.5) +
+    geom_text(aes(label=GOterms, y=0.1), hjust=0, col='black') +
+    coord_flip() + cowplot::theme_cowplot() +
+    theme(axis.text.y=element_blank()) + theme(aspect.ratio=.3) +
+    scale_y_continuous(expand=c(0, 0)) +
+    labs(x='Top10 GO terms', y='')
+  
+  ggsave(paste("Data/fig/", cluster_plot_file,".png", sep=""), plot = cluster_plot)
+}
+```
+
+### Make GO term plots for BP function
+
+```{r}
+KEGG_cluster_df <- bind_rows(KGEE_list_of_frames, .id="df")
+```
+
+
+```{r}
+coseq_cluster_plot <- readRDS('Data/rds_files/20220620_coseq_fig.rds')
+coseq_cluster_plot_mod <- coseq_cluster_plot$boxplot + 
+  theme_bw() +
+  theme(axis.ticks = element_line(color="black", size=0.7),
+        axis.line = element_line(color="black", size=0.7),
+        text = element_text(size = 9)) +
+  scale_fill_brewer(type = "qual") +
+  coord_flip()+
+  facet_grid(factor(labels, levels = c(1:9)) ~ .) +
+  theme(legend.position = "top")
+
+ggsave(paste("Data/fig/", "20220620_coseq_cluster_plot_mod.png", sep=""), plot = coseq_cluster_plot_mod, dpi = 300, width = 5, height = 12)
+```
+
+###counting different TF families in each cluster
+
+```{r}
+TF_cluster_counts <- ddply(DEseq_norm_lin_TF, .(DEseq_norm_lin_TF$cluster_num, DEseq_norm_lin_TF$Family), nrow)
+names(TF_cluster_counts) <- c("cluster", "TF_family", "Freq")
+TF_cluster_counts <- na.omit(TF_cluster_counts)
+head(TF_cluster_counts)
+```
+
+###Calculate percetntage and get most abundant TF for each cluster
+
+```{r}
+TF_cluster_counts_10 <- TF_cluster_counts %>% 
+  dplyr::group_by(cluster) %>% 
+  dplyr::mutate(FreqT= sum(Freq)) %>%
+  mutate(percent = (Freq /FreqT) * 100) %>% 
+  slice_max(order_by= as.numeric(Freq), n=4, with_ties=T)
+write.csv(TF_cluster_counts_10, "Data/tables/20220719_TF_cluster_counts_10.csv")
+```
+```{r}
+head(TF_cluster_counts_10)
+table(TF_cluster_counts_10$TF_family)
+
+TF_cluster_counts_10 %>% 
+  dplyr::group_by(TF_family) %>% 
+  dplyr::mutate(TF_family_freq= sum(Freq)) %>%
+  dplyr::select(TF_family, TF_family_freq)
+```
+
+
+###TF plot
+```{r}
+
+TF_cluster_counts_10_plot <- ggplot(TF_cluster_counts_10, aes(x=TF_family, y=Freq, fill = TF_family)) + 
+  geom_col() +
+  geom_text(aes(label=TF_family, y=0.1), hjust=0, col='black', text = element_text(size = 5)) +
+    coord_flip()+
+    theme(axis.text.y=element_blank()) +
+  theme(aspect.ratio=.3) +
+    
+      labs(x='', y='') +
+  facet_grid(cluster ~ .)
+  
+ggsave(paste("Data/fig/", "TF_cluster_counts_10_plot",".png", sep=""), plot = TF_cluster_counts_10_plot)
+```
+## plot fold change
+
+### wide long for the expression data
+
+```{r}
+DEseq_loglong <- DEseq_norm_lin_TF %>% 
+  dplyr::select(geneId, DE_R1_mock, DE_R25_mock, R1_LFC, R25_LFC, cluster_num) %>%
+  pivot_longer(cols = R1_LFC:R25_LFC,
+               names_to = "treatment", 
+               values_to = "Log2foldchange") %>%
+  mutate(up_down = if_else(Log2foldchange < 0 , "down", "up"))
+```
+
+```{r}
+line_df <- data.frame("cluster_num"=unique(sort(DEseq_loglong$cluster_num)), "value"= rep(0, 9))
+```
+
+
+
+```{r}
+logfold_plot <- ggplot(DEseq_loglong,aes(x=treatment,y=Log2foldchange, colour = up_down))+
+  geom_point()+
+  xlab("treatment")+
+  ylab("")+
+  coord_flip() + cowplot::theme_cowplot(12) +
+  theme(axis.text=element_text(color="black",size=8))+
+  theme(panel.border=element_rect(colour="black"))+
+  theme(plot.title=element_text(vjust=1),legend.key=element_blank())
+
+logfold_plot <- logfold_plot + 
+  geom_hline(aes(yintercept = value), line_df)+
+  facet_grid(vars(cluster_num), scales = "free_x") 
+
+
+ggsave(paste("Data/fig/", "20220722_clusterlogfoldchange",".png", sep=""), plot = logfold_plot, width = 8,
+  height = 12)
+```
+
+###differentially expresse wrky in https://www.sciencedirect.com/science/article/pii/S0888754318303306#bb0110
+
+```{r}
+pathogen_genes <- c("
+Glyma.02G028100
+Glyma.02G028600
+Glyma.02G268200
+Glyma.04G131100
+Glyma.18G177000
+Glyma.19G011700
+Glyma.19G188100
+Glyma.16G195600
+")
+
+pathogen_names = read.table(textConnection(pathogen_genes), header=FALSE)
+as.data.frame(linDE[pathogen_names$V1, ])
+
+```
+
+```{r}
+wrky_Peronospora <- c("
+                      Glyma.01G128100
+Glyma.03G220800
+Glyma.04G061400
+Glyma.06G147100
+Glyma.06G307700
+Glyma.07G023300
+Glyma.08G218600
+Glyma.09G280200
+Glyma.11G163300
+Glyma.13G370100
+Glyma.17G035400
+Glyma.17G042300
+Glyma.18G056600
+Glyma.18G208800
+Glyma.19G094100
+Glyma.19G217800
+                      
+                      ")
+
+wrky_Peronospora_names = read.table(textConnection(wrky_Peronospora), header=FALSE)
+
+DEseq_norm_lin_TF[DEseq_norm_lin_TF$geneId %in% wrky_Peronospora_names $V1, ]
+
+
+```
+###WRKY33
+```{r}
+WRKY33 <- c("Glyma.02G203800
+Glyma.06G219800
+Glyma.12G152600
+Glyma.17G074000 
+            ")
+WRKY33_names = read.table(textConnection(WRKY33), header=FALSE)
+
+DEseq_norm_all[WRKY33_names$V1, ]
+linDE[WRKY33_names$V1, ]
+```
+WRKY18
+```{r}
+WRKY18 <- c("Glyma.03G256700
+Glyma.04G238300
+Glyma.06G125600
+            ")
+WRKY18_names = read.table(textConnection(WRKY18), header=FALSE)
+
+DEseq_norm_all[WRKY18_names$V1, ]
+linDE[WRKY18_names$V1, ]
+```
+
+###signalling
+
+
+```{r}
+MAPK_genes <- c("Glyma.02G138800","Glyma.07G003200", "Glyma.16G032900", "Glyma.07G066800", "Glyma.16G047600")
+names(MAPK_genes) <- c("GmMAPK6", "GmMKK4", "GmMAPK4a", "GmMAPK4b", "GmERF113")
+linDE[MAPK_genes, ]
+```
+
+### Rps1-k
+```{r}
+rps1_k <- c("
+Glyma.03G034900
+Glyma.03G037100
+Glyma.03G037000
+Glyma.03G039500
+Glyma.03G038800
+Glyma.03G037300
+Glyma.03G037400
+Glyma.03G034800
+Glyma.03G034400")
+
+rps1_k_names = read.table(textConnection(rps1_k), header=FALSE)
+DEseq_norm_all[rps1_k_names$V1, ]
+
+linDE[rps1_k_names$V1, ]
+```
+
+
+
+###calcuated the percentage of TF family in each cluster
+
+```{r}
+TF_cluster_countsW <- reshape(TF_cluster_counts, idvar = "TF_family", timevar = "cluster", direction = "wide")
+
+TF_cluster_countsW[is.na(TF_cluster_countsW)] <- 0
+TF_cluster_countsW <- TF_cluster_countsW[match(names(tf_freq), TF_cluster_countsW$TF_family),]
+TF_cluster_countsW_per <- t(t((TF_cluster_countsW[, 2:10])/tf_freq *100))
+row.names(TF_cluster_countsW_per) <- TF_cluster_countsW$TF_family
+```
+
+# 3f. plot cluster-wise expression change (z-score): using cluster memberships
+
+```{r}
+#DEseq_CLR_coseqtr <- rownames_to_column(DEseq_CLR_coseqtr)
+Merge_cluster_df_sum <- Merge_cluster_df  %>%
+  left_join(DEseq_CLR_coseqtr, by=c("gene_names"= "rowname")) %>%
+  group_by(cluster_num) %>%
+  summarize('Mock'=rowMeans(dplyr::select(DEseq_CLR_coseqtr, starts_with("M")), na.rm = TRUE))
+  
+
+```
+
+### CAMATA
+```{r}
+CAMATA <- c("
+Glyma.05G117000
+Glyma.05G148300
+Glyma.05G178200
+Glyma.07G242000
+Glyma.08G072100
+Glyma.08G105200
+Glyma.08G135200
+Glyma.09G038300
+Glyma.11G251900
+Glyma.15G053600
+Glyma.15G143400
+Glyma.17G031900
+Glyma.17G038800
+Glyma.18G005100")
+
+CAMATA_names = read.table(textConnection(CAMATA), header=FALSE)
+CAMATA_exp <- DEseq_norm_all[CAMATA_names$V1, ]
+
+write.csv(CAMATA_exp, "Data/tables/20220730_CAMATA_exp.csv")
+
+```
+
+
+
+melt(id.vars=c('cluster', 'n'), variable.name='time', value.name='z')
+%\>%
+
+mutate('cluster'=paste0('cluster ', cluster, ' (N=', n, ')'),
+'time'=as.numeric(as.character(time))) %\>% select(-n) %\>%
+ggplot(aes(x=time, y=z, group=cluster)) + geom_line() + geom_point() +
+facet_wrap(\~cluster, ncol=1) + labs(y='z-score', x='time (min)',
+caption='cluster numbers from cuttree') + theme_bw() +
+scale_color_brewer(palette='Set1', direction=-1) + theme(aspect.ratio=1,
+legend.position='none', panel.grid.minor=element_blank())
+
+\`\`\`

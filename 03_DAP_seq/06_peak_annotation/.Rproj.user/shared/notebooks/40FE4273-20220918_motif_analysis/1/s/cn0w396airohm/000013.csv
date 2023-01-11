@@ -1,0 +1,4 @@
+"0","write_csv(RNAseq_data_motif_pred, ""~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Data/tables/20221019_RNAseq_data_motif.csv"", quote = FALSE)
+"
+"2","Error in match.arg(quote) : 'arg' must be NULL or a character vector
+"

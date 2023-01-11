@@ -1,0 +1,42 @@
+---
+title: "Stride_Selection"
+author: "Brett Hale"
+date: "8/17/2022"
+output: html_document
+---
+
+
+```{r}
+library(dbplyr)
+library(dplyr)
+library(devtools)
+library(ggplot2)
+library(viridis)
+```
+
+
+```{r}
+Stride <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/Stride.csv")
+
+Stride$Stride <- as.character(Stride$Stride)
+
+ggplot(Stride, aes(fill = Response, y = value, x = Stride, label = value )) +
+  geom_bar(position = "stack", stat = "identity", color = "black") +
+  facet_wrap(TF ~., nrow = 2) +
+  theme(axis.text = element_text(color = "black")) +
+  theme(strip.background = element_rect(fill = 'transparent'), strip.text = element_text(color = "black", face = "bold", size = 16)) +
+  theme(panel.background = element_rect(fill = 'transparent'), plot.background = element_rect(fill='transparent', color=NA), panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  theme(axis.title.y = element_blank(), axis.title.x = element_text(size = 14), axis.text = element_text(size = 12)) +
+  theme(axis.line = element_line(color = "black")) +
+ scale_fill_viridis(discrete = TRUE,
+                     option = "viridis",
+                     begin = 0.2 ) +
+  theme(legend.position = "bottom", legend.title = element_text(size=14, face = "bold"), 
+        legend.text = element_text(size=12)) +
+  geom_text(size = 5, position = position_stack(vjust = 0.5)) +
+  theme(legend.background = element_rect(fill='transparent'))
+
+ggsave("fig4_sample.png", width = 8, height = 10, units = "in", bg='transparent', dpi = 600)
+
+```
+

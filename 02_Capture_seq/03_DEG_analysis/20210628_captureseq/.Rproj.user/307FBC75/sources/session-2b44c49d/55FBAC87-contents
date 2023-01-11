@@ -1,0 +1,254 @@
+---
+title: "20221222_data_analysis"
+author: "Asela Wijeratne"
+date: "2022-12-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(apeglm)
+library(tximport)
+library(DESeq2)
+library("pheatmap")
+library(ggplot2)
+library(calibrate)
+library("RColorBrewer")
+library(dplyr)
+library(reshape2)
+library(tidyverse)
+library(ComplexHeatmap)
+library(circlize)
+```
+
+##names that you want to import 
+
+```{r}
+files_names <- c("TC_1_1", 
+                 "TC_1_2",
+                 "TC_1_3",
+                 "TC_1_4",
+                 "TC_1_5",
+                 "TC_1_6",
+                 "TC_1_7",
+                 "TC_1_8")
+files <- file.path(files <- "/Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210208_captureseq/20210628_data_analysis/03_kalisto_alginment", files_names, "abundance.tsv")
+```
+
+##import files into Rstudio using txiport 
+
+```{r}
+txi.kallisto.tsv <- tximport(files, 
+                             type = "kallisto", 
+                             geneIdCol = "target_id", 
+                             ignoreAfterBar = TRUE, 
+                             txOut=TRUE)
+```
+
+# to look at the first part of the count table 
+
+```{r}
+head(txi.kallisto.tsv$counts, n=10)
+```
+
+#sample that describe control and treatment samples 
+
+```{r}
+sampleTable <- data.frame(condition = factor(c(rep("race1", each =3),
+                                             rep("mock", each = 3), 
+                                    
+                                             rep("race25", each=2))))
+```
+
+#both these commands will relabel the raw names of the sampleTable
+```{r}
+rownames(sampleTable) <- files_names
+colnames(txi.kallisto.tsv$counts) <- files_names
+```
+
+
+#create data object for DESeq function
+```{r}
+dds <- DESeqDataSetFromTximport(txi.kallisto.tsv, sampleTable, ~condition)
+```
+
+
+#perform the DE analysis - statistical analysis will be performed for each gene
+
+```{r}
+dds <- DESeq(dds)
+keep <- rowMeans(counts(dds)) > 20
+
+dds <- dds[keep,]
+
+```
+###converting into distance data
+
+```{r}
+vsd <- vst(dds, nsub=nrow(dds), blind=FALSE)
+```
+
+###boxplot to see count distributions
+```{r}
+boxplot(assay(vsd), xlab="", ylab="Log2 counts per million",las=2,main="Normalised Distributions")
+```
+
+###PCA to sample distribution 
+
+```{r}
+plot_data <- plotPCA(vsd,intgroup=c("condition"),returnData=TRUE)
+plot_data <- bind_cols(plot_data, sampleTable)
+
+ggplot(plot_data, aes(x = PC1,y=PC2, col=group,label=name)) + 
+  geom_point() + geom_text(alpha=0.6)
+
+```
+
+#get the results fromt the dds and assign it to res variable
+
+```{r}
+res_Race1_vs_mock <- results(dds, name="condition_race1_vs_mock")
+
+res_Race25_vs_mock <- results(dds, name="condition_race25_vs_mock")
+
+```
+
+##function to get differentially expressed genes
+
+```{r}
+
+getDE_genes <- function(res_counts, padj_cutoff=0.05, comparison){
+  DE_dataframe <- as.data.frame(res_counts[!is.na(res_counts$padj) & res_counts$padj <= padj_cutoff, ])
+  DE_dataframe <- DE_dataframe[, c(1, 2, 6)]
+  colnames(DE_dataframe) <- c(paste(colnames(DE_dataframe), "_", comparison, sep = ""))
+  DE_dataframe$geneId <- row.names(DE_dataframe)
+  return(DE_dataframe)
+}
+```
+
+##pairwise comparisons between mock and Race1, and mock and Race25
+
+```{r}
+res_Race1_vs_mock_sig <- getDE_genes(res_Race1_vs_mock, padj_cutoff=1, "Race1_vs_mock")
+
+res_Race25_vs_mock_sig <- getDE_genes(res_Race25_vs_mock, padj_cutoff=1, "Race25_vs_mock")
+
+```
+
+##get normalized data and rename colnames
+
+```{r}
+countsdds <- as.data.frame(counts(dds, normalized = TRUE))
+
+colnames(countsdds) <-  c("Race1_1", "Race_2",	"Race_3", "Mock1",	"Mock2",	"Mock3",	"Race25_1", "Race25_2")
+countsdds <- rownames_to_column(countsdds) #covert rownames to rowname column
+colnames(countsdds)[1] <- "geneId" #rename the rowname as geneId
+head(countsdds)
+```
+
+##combine normalized counts and df stats. Label signficant genes as Yes and No. 
+
+```{r}
+countdds_sig_genes <- countsdds %>% 
+  full_join(res_Race1_vs_mock_sig, by =  "geneId") %>%
+  full_join(res_Race25_vs_mock_sig, by = "geneId")
+
+countdds_sig_genes <- countdds_sig_genes %>%
+  mutate(Race25_vs_mock_sig = if_else(padj_Race25_vs_mock <= 0.05, "yes", "no")) %>%
+  mutate(Race1_vs_mock_sig = if_else(padj_Race1_vs_mock <= 0.05, "yes", "no"))
+
+head(countdds_sig_genes)  
+```
+
+##Remove trailing numbers for different isoforms and write the dataframe to csv file
+
+```{r}
+countdds_sig_genes$geneId <- gsub(".{2}$", "", countdds_sig_genes$geneId)
+
+
+write.csv(countdds_sig_genes, file="20221222_Capture_seq.csv", row.names = FALSE)
+
+```
+
+
+##combine with Lin etal (2014) data
+```{r}
+df_log_ratio <- read.csv("df_log_ratio.csv",sep=",")
+
+countdds_sig_genes_all <- merge(countdds_sig_genes, df_log_ratio, by.x = "geneId", by.y ="X", all.x =TRUE)
+countdds_sig_genes_all <- countdds_sig_genes_all %>% 
+  rename(Race1_mock = log2FoldChange_Race1_vs_mock,
+         Race25_mock = log2FoldChange_Race25_vs_mock,
+         Race1_mock_RNAseq = Rps1_k)
+
+```
+
+
+```{r}
+house_keeping <- c("
+Glyma.20G141600
+Glyma.12G020500
+Glyma.12G051100
+Glyma.20G136000
+Glyma.12G024700
+Glyma.08G182200")
+
+house_keeping_names = read.table(textConnection(house_keeping),header=FALSE)
+house_keeping_df <- countdds_sig_genes_all[countdds_sig_genes_all$geneId %in% house_keeping_names$V1, ]
+
+house_keeping_df[is.na(house_keeping_df)] <- 0
+
+house_keeping_matrix <- house_keeping_df %>% 
+  select(-geneId) %>% 
+  select(c("Race1_mock", "Race25_mock", "Race1_mock_RNAseq")) %>%
+  as.matrix()
+
+
+rownames(house_keeping_matrix) <- house_keeping_df$geneId
+Heatmap(house_keeping_matrix, km = 5, col = colorRamp2(c(-4, 0, 4), c("green", "white", "red")), show_column_names = TRUE, show_row_names = FALSE,
+        show_row_dend = FALSE, show_column_dend = FALSE) +
+  Heatmap(as.matrix(house_keeping_df[, c(16,17)]),  name = "Statical significance", show_row_names = FALSE, width = unit(20, "mm")) 
+
+
+```
+
+
+```{r}
+###########pathogen induce genes
+
+pathogen_genes <- c("
+Glyma.02G028100
+Glyma.02G028600
+Glyma.02G268200
+Glyma.04G131100
+Glyma.13G252000
+Glyma.16G195600
+Glyma.18G177000
+Glyma.19G011700
+Glyma.19G188100
+                ")
+
+
+pathogen_genes_names = read.table(textConnection(pathogen_genes),header=FALSE)
+
+pathogen_genes_df <- countdds_sig_genes_all[countdds_sig_genes_all$geneId %in% pathogen_genes_names$V1,]
+
+
+pathogen_genes_df[is.na(pathogen_genes_df)] <- 0
+
+pathogen_genes_matrix <- pathogen_genes_df %>% 
+  select(-geneId) %>% 
+  select(c("Race1_mock", "Race25_mock", "Race1_mock_RNAseq")) %>%
+  as.matrix()
+
+ha1 = rowAnnotation(statistical_significance = as.matrix(pathogen_genes_df[, c(16,17)]), annotation_legend_param = list())
+lgd = Legend(labels = c("Yes", "No"), title = "statistical significance", legend_gp = gpar(fill = 1:2),
+             title_position = "leftcenter-rot")
+rownames(pathogen_genes_matrix) <- pathogen_genes_df$geneId
+ht_list <- Heatmap(pathogen_genes_matrix, km = 5, col = colorRamp2(c(-6, 0, 6), c("green", "white", "red")), show_column_names = TRUE,  show_row_names = FALSE,
+        show_row_dend = FALSE, show_column_dend = FALSE, right_annotation = ha1) 
+draw(ht_list, heatmap_legend_side = "right", annotation_legend_side = "bottom") 
+
+
+
+```
+

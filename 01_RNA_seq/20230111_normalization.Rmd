@@ -1,0 +1,408 @@
+---
+title: "Initial RNAseq analysis"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+#Load the edgeR and statmod libraries
+library("edgeR")
+library("statmod")
+#import data matrix 
+
+# tidyverse core packages
+library(tibble)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
+library(ggplot2)
+library(purrr)
+library(tidyverse)
+library(ComplexHeatmap)
+library(coseq)
+library(Biobase)
+library(corrplot)
+# tidyverse-friendly packages
+library(plotly)
+library(ggrepel)
+library(GGally)
+library(ggvenn)
+library(DESeq2)
+library("sva")
+library("gridExtra")
+library(ComplexHeatmap)
+library(circlize)
+```
+
+
+```{r}
+cts <- as.matrix(read.csv("../readcount.txt",sep="\t",row.names="gene_id"))
+
+#check if the data has correctly been upload
+
+head(cts)
+
+#making a study design file
+
+# set `mock` as reference level
+
+###First samples 
+
+cts_2 <- as.matrix(read.csv("../readcount_RNAseq1.txt",sep="\t",row.names="gene_id"))
+
+
+head(cts_2)
+
+colnames(cts_2) <- c("R1_4", "R1_5",	"R1_6", "M4",	"M5",	"M6",	"R25_4", "R25_5", "R25_6")
+
+cts_merged <- merge(cts, cts_2, by="row.names")
+head(cts_merged)
+
+```
+
+###Remove two mock samples from the first run
+
+
+```{r}
+cts_merged_mkrm <- cts_merged[, -which(names(cts_merged) %in% c("R1_3", "R1_5", "R25_3", "M4","M5"))]
+
+
+```
+
+###create a study design for 
+
+```{r}
+
+trt <- c(rep("Race1", 2), rep("mock", 3), rep("Race25", 2), rep("Race1", 2), rep("mock", 1), rep("Race25", 3))
+
+#trt <- relevel(trt, ref="mock")
+
+batch <- as.factor(c(rep("batch2", 7), rep("batch1", 6)))
+
+std_design <-data.frame(trt, batch)
+std_design$trt <- relevel(std_design$trt, ref = "mock")
+row.names(std_design) <- colnames(cts_merged_mkrm)[2:14]
+
+
+row.names(cts_merged_mkrm) <- cts_merged_mkrm$Row.names
+cts_merged_mkrm$Row.names <- NULL
+
+group <- factor(paste(std_design$trt,std_design$batch,sep="."))
+std_design <- cbind(std_design,Group=group)
+```
+
+
+
+
+
+#Retain genes only if it is expressed at a minimum level
+
+```{r}
+keep <- rowMeans(cts_merged_mkrm) > 20
+combine_list <- combine_list[keep, , keep.lib.sizes=FALSE]
+#View a summary of the normalized counts
+summary(keep)
+
+```
+
+
+
+##Batch Correction
+=========================================================================================
+```
+Introduction to Batch correction
+https://rnabio.org/module-03-expression/0003/05/01/Batch-Correction/
+
+We highly recommend reading the entire ComBat-Seq manuscript by Yuqing Zhang, Giovanni Parmigiani, and W Evan Johnson. This manuscript does a beautiful job of briefly introducing the concept of batch correction and the differences between normalization and batch correction. If you find this exercise helpful in your research, please cite the ComBat-Seq paper (PMID: 33015620).
+
+In particular, this excerpt covers the basics:
+
+Genomic data are often produced in batches due to logistical or practical restrictions, but technical variation and differences across batches, often called batch effects, can cause significant heterogeneity across batches of data. Batch effects often result in discrepancies in the statistical distributions across data from different technical processing batches, and can have unfavorable impact on downstream biological analysis …
+
+Batch effects often cannot be fully addressed by normalization methods and procedures. The differences in the overall expression distribution of each sample across batch may be corrected by normalization methods, such as transforming the raw counts to (logarithms of) CPM, TPM or RPKM/FPKM, the trimmed mean of M values (TMM), or relative log expression (RLE). However, batch effects in composition, i.e. the level of expression of genes scaled by the total expression (coverage) in each sample, cannot be fully corrected with normalization. … while the overall distribution of samples may be normalized to the same level across batches, individual genes may still be affected by batch-level bias.
+
+
+
+```
+####preparing study design for Combat analysis
+
+```{r}
+replicates = c(1, 2, 1, 2, 3, 1, 2, 4, 5, 4, 4, 5, 6)
+std_design_sva <-data.frame(trt, batch, replicates)
+```
+
+
+
+####Combat analysis
+
+```{r}
+
+groups = sapply(as.character(trt), switch, "Race1" = 1, "mock" = 3, "Race25"= 2, USE.NAMES = F)
+groups
+corrected_data = ComBat_seq(counts = as.matrix(cts_merged_mkrm), batch = batch, group = groups)
+
+write.csv(corrected_data, file="20220304_corrected_data.csv")
+```
+
+####use corrected data for DEseq 
+```{r}
+dse <- DESeqDataSetFromMatrix(corrected_data,
+                              colData = std_design,
+                              design =~batch + trt)
+```
+
+```{r}
+# use keep from EdgeR 
+
+dse <- dse[keep,]
+
+```
+
+
+#### vsd tranformation to check the samples 
+
+```{r}
+vsd <- vst(dse,blind=TRUE)
+```
+
+####check data using a PCA
+
+####make a PCA data for ggplot
+```{r}
+plot_DEseq <- plotPCA(vsd,intgroup=c("trt"),returnData=TRUE)
+DEseq_PCA <- ggplot(plot_DEseq, aes(x = PC1,y=PC2, col=trt,label=name)) + 
+  geom_point() + geom_text(alpha=0.6)
+
+```
+
+
+
+
+####differential gene expression analysis
+
+```{r}
+dds <- DESeq(dse)
+plotDispEsts(dds)
+resultsNames(dds)
+```
+
+
+#### generate results table for different combinations
+
+```{r}
+
+DEseq_Race1_vs_mock <- results(dds, name="trt_Race1_vs_mock")
+
+DEseq_Race25_vs_mock <- results(dds, name="trt_Race25_vs_mock")
+
+DEseq_Race1_Race25 <- results(dds, c('trt', "Race1", "Race25"))
+
+DEseq_batch2_batch2<- results(dds, name = "batch_batch2_vs_batch1" )
+
+```
+
+
+####create a function to filter signficant genes
+
+```{r}
+getDE_genes <- function(res_counts, padj_cutoff=0.05, comparison){
+  DE_dataframe <- as.data.frame(res_counts[!is.na(res_counts$padj) & res_counts$padj <= padj_cutoff, ])
+  DE_dataframe <- DE_dataframe[, c(1, 2, 6)]
+  colnames(DE_dataframe) <- c(paste(colnames(DE_dataframe), "_", comparison, sep = ""))
+  DE_dataframe$geneId <- row.names(DE_dataframe)
+  return(DE_dataframe)
+}
+```
+####filter signficant genes
+
+```{r}
+DEseq_Race1_vs_mock_sig <- getDE_genes(DEseq_Race1_vs_mock, padj_cutoff=0.05, "Race1_vs_mock")
+nrow(DEseq_Race1_vs_mock_sig)
+DEseq_Race25_vs_mock_sig <- getDE_genes(DEseq_Race25_vs_mock, padj_cutoff=0.05, "Race25_vs_mock")
+nrow(DEseq_Race25_vs_mock_sig)
+DEseq_Race1_Race25_sig <- getDE_genes(DEseq_Race1_Race25, padj_cutoff=0.05, "Race1_Race25")
+nrow(DEseq_Race1_Race25_sig)
+DEseq_batch2_batch2_sig <- getDE_genes(DEseq_batch2_batch2, padj_cutoff=0.05, "batch2_batch2")
+nrow(DEseq_batch2_batch2_sig)
+```
+
+###Note on 3/30/2022: There was an error in the code. Therefore, DE list was not correct. I have corrected the code. Checked exported individial DE list for each comparison and counted numbers and compared it with combined Venn diagram. This seems correct.
+
+```
+#DEseq_Race1_vs_mock 
+write.csv(as.data.frame(DEseq_Race1_vs_mock), "20220328_DEseq_Race1_vs_mock.csv")
+#DEseq_Race25_vs_mock 
+write.csv(as.data.frame(DEseq_Race25_vs_mock), "20220328_DEseq_Race25_vs_mock.csv")
+#DEseq_Race1_Race25
+write.csv(as.data.frame(DEseq_Race1_Race25), "20220328_DEseq_Race1_Race25.csv")
+#DEseq_batch2_batch2
+write.csv(as.data.frame(DEseq_batch2_batch2), "20220328_DEseq_batch2_batch2.csv")
+```
+
+
+####check the overlap of the different genes 
+
+```{r}
+DEseq_list <- list(
+  Race1_vs_mock = row.names(DEseq_Race1_vs_mock_sig), 
+  Race25_vs_mock = row.names(DEseq_Race25_vs_mock_sig), 
+  Race1_Race25 = row.names(DEseq_Race1_Race25_sig),
+  Batch1and2 =row.names(DEseq_batch2_batch2_sig)
+)
+
+
+ggvenn(
+  DEseq_list, 
+  fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"),
+  stroke_size = 0.5, set_name_size = 4
+)
+
+
+nrow(DEseq_batch2_batch2_sig)
+```
+
+#####after corrections
+```{r}
+d_corrected <- plotCounts(dds, gene="Glyma.04G121700", intgroup="trt", normalized = TRUE,
+                returnData=TRUE)
+d_corrected
+
+ggplot(d_corrected, aes(x=trt, y=count)) + 
+  geom_point(position=position_jitter(w=0.1,h=0)) + 
+  scale_y_log10(breaks=c(25,100,400))
+
+```
+
+
+
+####house keeping gene expression
+
+####create a function to return a plot with gene expression for more than one gene to modify DEseq plotCount funciton
+
+
+
+```{r}
+gene_expression_graph <- function(res_counts, gene_names){
+  house_keeping_names = read.table(textConnection(gene_names),header=FALSE)
+  datalist = list()
+  
+  for (i in 1:dim(house_keeping_names)[1]) {
+    gene_name <- house_keeping_names$V1[i]
+    print(as.character(gene_name))
+    dat <- plotCounts(res_counts, gene=as.character(gene_name), intgroup="trt", normalized = TRUE,
+                      returnData=TRUE)
+    dat$gene_name <- gene_name
+    datalist[[i]] <- dat
+    
+  }
+  
+  gene_expression <- do.call(rbind, datalist)
+  house_keeping_gg <- ggplot(gene_expression, aes(x=trt, y=count)) + 
+    geom_point(position=position_jitter(w=0.1,h=0)) + 
+    scale_y_log10(breaks=c(25,100,400))
+  
+  house_keeping_gg <- house_keeping_gg + facet_wrap( ~ gene_name, ncol=2)
+  
+  return(house_keeping_gg)
+  
+  
+}
+
+```
+
+
+```{r}
+house_keeping <- c("
+Glyma.20G141600
+Glyma.12G020500
+Glyma.12G051100
+Glyma.20G136000
+Glyma.12G024700
+Glyma.08G182200
+                ")
+
+
+#gene_expression_graph(dds, house_keeping)
+
+```
+
+
+
+####pathogen induced genes
+
+```{r}
+pathogen_genes <- c("
+Glyma.02G028100
+Glyma.02G028600
+Glyma.02G268200
+Glyma.04G131100
+Glyma.18G177000
+Glyma.19G011700
+Glyma.19G188100
+Glyma.16G195600
+")
+
+#gene_expression_graph(dds, pathogen_genes )
+
+```
+
+
+
+
+####merge significantly changed genes
+
+```{r}
+all_sign_genes <- Reduce(function(x, y) merge(x, y, all=TRUE, by ="geneId"), 
+       list(DEseq_Race1_vs_mock_sig , 
+            DEseq_Race25_vs_mock_sig, 
+            DEseq_Race1_Race25_sig,
+            DEseq_batch2_batch2_sig))
+
+head(all_sign_genes)
+```
+
+###Normalized counts 
+
+
+```{r}
+DEseq_norm <- data.frame(counts(dds, normalized=TRUE))
+DEseq_norm <- DEseq_norm + 1
+head(DEseq_norm)
+
+```
+
+###to remove genes affact by the batch alone 
+```{r}
+DEseq_Race1_vs_mock_sig_br <- DEseq_Race1_vs_mock_sig[!row.names(DEseq_Race1_vs_mock_sig) %in% row.names(DEseq_batch2_batch2_sig), ]
+nrow(DEseq_Race1_vs_mock_sig)
+nrow(DEseq_Race1_vs_mock_sig_br)
+
+DEseq_Race25_vs_mock_sig_br <- DEseq_Race25_vs_mock_sig[!row.names(DEseq_Race25_vs_mock_sig) %in% row.names(DEseq_batch2_batch2_sig),]
+DEseq_Race1_Race25_sig_br <- DEseq_Race1_Race25_sig[!row.names(DEseq_Race1_Race25_sig) %in% row.names(DEseq_batch2_batch2_sig),]
+```
+
+
+
+###get log fold change and significance
+```{r}
+DEseq_norm$geneId <- rownames(DEseq_norm)
+
+DEseq_norm <- DEseq_norm[, c("geneId", "M1", "M2", "M3", "M6", "R1_1", "R1_2", "R1_4", "R1_6", "R25_1", "R25_2", "R25_4", "R25_5", "R25_6")]
+
+DEseq_norm <- DEseq_norm %>%
+  
+  mutate(DE_R1_mock = if_else(rownames(DEseq_norm) %in% row.names(DEseq_Race1_vs_mock_sig_br), "yes", "no")) %>%
+  mutate(DE_R25_mock = if_else(rownames(DEseq_norm) %in% row.names(DEseq_Race25_vs_mock_sig_br), "yes", "no")) %>%
+  mutate(DE_R1_R25 = if_else(rownames(DEseq_norm) %in% row.names(DEseq_Race1_Race25_sig_br), "yes", "no")) %>%
+  rowwise()%>%
+  mutate(meanM = sum(M1, M2, M3, M6)/4, meanR1 = sum(R1_1, R1_2, R1_4, R1_6)/4,  meanR25 = sum(R25_1, R25_2, R25_4, R25_5, R25_6)/5) %>%
+  mutate(R1_LFC = log2(meanR1/meanM), R25_LFC = log2(meanR25/meanM))
+
+
+head(as.data.frame(DEseq_norm))
+```
+
+
+

@@ -1,0 +1,10 @@
+"0","cd /Users/aselawijeratne/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GRN/20220801_GRN/20220918_bindingsites/DE_set
+wc -l *.bed"
+"1","   33095 ERF_motif_sorted_new.bed
+   16235 MYB_motif_sorted_new.bed
+   12189 NAC_motif_sorted_new.bed
+    1604 RAV_motif_sorted_new.bed
+    1653 blhl_motif_sorted_new.bed
+   11528 wrky_motif_sorted_new.bed
+   76304 total
+"

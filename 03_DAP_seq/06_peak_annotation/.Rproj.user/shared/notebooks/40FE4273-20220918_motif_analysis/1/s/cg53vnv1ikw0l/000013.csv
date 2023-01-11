@@ -1,0 +1,8 @@
+"0","freq_tf_motifs <- bed %>%"
+"0","  count(V4, TF_family) %>%"
+"0","  group_by(TF_family) %>%          # now required with changes to dplyr::count()"
+"0","  mutate(prop = prop.table(n))"
+"0",""
+"0","#write.csv(freq_tf_motifs, paste(file_loc, ""20220918_freq_tf_motifs.csv"", sep = """"))"
+"0",""
+"0","head(freq_tf_motifs)"

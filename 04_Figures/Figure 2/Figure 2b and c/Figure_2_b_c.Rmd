@@ -1,0 +1,168 @@
+---
+title: "Figure_2_b_c"
+author: "Brett Hale"
+date: "6/14/2022"
+output: html_document
+---
+
+```{r}
+library(DESeq2)
+library(tidyverse)
+library(ggplot2)
+library(RColorBrewer)
+library(DESeq2)
+library(dplyr)
+library("edgeR")
+library("statmod")
+
+#import data matrix 
+# tidyverse core packages
+
+library(tibble)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
+library(ggplot2)
+library(purrr)
+library(tidyverse)
+library(ComplexHeatmap)
+library(Biobase)
+library(corrplot)
+
+# tidyverse-friendly packages
+library(plotly)
+library(ggrepel)
+library(GGally)
+library(ggvenn)
+```
+
+```{r}
+library(dplyr)
+
+DE_DEseq_norm <- read.csv("~/Downloads/20220401_DE_DEseq_norm.csv")
+
+head(DE_DEseq_norm)
+
+DEseq_norm <- DE_DEseq_norm %>%
+  
+  mutate(linetaldf = if_else(DE_DEseq_norm$geneId %in% row.names(dflinetal_deseq), "yes", "no"))
+
+head(DEseq_norm)
+
+
+table(DEseq_norm$linetaldf)
+
+nrow(DE_DEseq_norm)
+
+write.csv(DEseq_norm, file="20220614_Overlap_with_Linetal.csv")
+
+
+
+```
+
+
+```{r TFs in Overlapping Data}
+
+DEseq_norm <- read.csv("/Volumes/USB20FD/PhD Research/Chapter_2/20220614_Overlap_with_Linetal.csv")
+
+
+All_TF_list <- read.delim("~/Downloads/Gma_TF_list.txt")
+
+TF_List <- All_TF_list[!duplicated(All_TF_list$Gene_ID), ]
+
+TFs_Interest <- merge(DEseq_norm, TF_List, by.x = c("geneId"), by.y =c("Gene_ID"))
+
+
+
+ggplot(TFs_Interest, aes( x = fct_infreq(Family))) +
+  geom_bar() +
+  coord_flip()
+
+##attempt to merge for frequency
+
+TF_Interest_Count <- table(TFs_Interest$Family)
+
+TF_Interest_DF <- as.data.frame(TF_Interest_Count)
+
+TF_Total_Count <- table(TF_List$Family)
+
+TF_Total_DF <- as.data.frame(TF_Total_Count)
+ 
+
+##now merge
+
+TF_Representation  <- merge(TF_Total_DF, TF_Interest_DF, by = "Var1")
+
+
+TF_Representation$Frequency <- TF_Representation$Freq.y /TF_Representation$Freq.x*100
+
+
+##plot
+ggplot(TF_Representation, aes(x = Frequency, y = Freq.y)) +
+  geom_point(aes(size = 5, alpha = 0.4, colour = "red")) +
+  ylab("Total Count") +
+  xlab("% Genome-wide Proportion") +
+  geom_label(data=subset(TF_Representation, Frequency > 40 | Freq.y > 30), hjust = 1.2, check_overlap = TRUE, aes(label = Var1, size = 5)) +
+  theme_classic()+
+  theme(axis.title.x=element_text(size = 22, colour = "black"),axis.title.y = element_text(size = 22, colour = "black"), axis.text.y = element_text(size = 20, colour = "black"), axis.text.x = element_text(size = 18, color = "black")) +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1)) +
+          theme(legend.position = "none") 
+
+
+ggsave("TF_Representation_2.png", width = 10, height = 8, units = "in", dpi = 600)
+list(TF_Representation)
+
+```
+
+
+
+```{r}
+
+##Venn Diagram
+
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("SC3")
+
+
+res_Race1_vs_mock_sig  <- DEseq_norm[DEseq_norm$DE_R1_mock == 'yes',]
+
+res_Race25_vs_mock_sig <- DEseq_norm[DEseq_norm$DE_R25_mock == 'yes',]
+
+res_Race1_Race25_sig <- DEseq_norm[DEseq_norm$DE_R1_R25 == 'yes',]
+
+
+
+x <- DEseq_norm %>%
+  
+  list(
+  Race1_vs_mock = row.names(res_Race1_vs_mock_sig), 
+  Race25_vs_mock = row.names(res_Race25_vs_mock_sig), 
+  Race1_Race25 = row.names(res_Race1_Race25_sig))
+
+
+ggvenn(
+  x, 
+  fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"),
+  stroke_size = 0.5, set_name_size = 4)
+
+##Second Go 
+ggvenn(
+  x, 
+  fill_color = c("lightblue", "lightblue4", "royalblue4", "navy"),
+  stroke_size = 0.5, set_name_size = 4)
+
+
+
+##Third Go 
+ggvenn(
+  x, 
+  fill_color = c("lightblue", "darksalmon", "firebrick", "palegreen3"),
+  stroke_size = 0.5, set_name_size = 4, text_size = 8)
+
+
+ggsave("RNAseq_venn_2.png", width = 10, height = 10, units = "in", dpi = 600)
+```
+
