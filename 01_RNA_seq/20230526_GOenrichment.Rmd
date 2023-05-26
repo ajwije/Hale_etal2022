@@ -1,0 +1,185 @@
+---
+title: "GO analysis"
+author: "Asela Wijeratne"
+date: '2023-5-26'
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r}
+library(stringr)
+library(dplyr)
+library("ggbeeswarm")
+library("pheatmap")
+library(ggplot2)
+library(edgeR)
+library(reshape2)
+library(rlist)
+library(dplyr)
+library(tidyverse)
+library(circlize)
+library(topGO)
+library(biomaRt)
+library(stringr)
+library(ggplot2)
+library(tidytext)
+
+
+```
+
+### getting data
+
+```{r}
+##all genes with differentially expressed genes labelled
+DEseq_norm_all <- read.csv("../20220401_DEseq_norm_bothbatch_all.csv", row.names = "geneId")
+#differentially expressed genes 
+DEseq_norm_lin_TF <-read.csv("20220617_DEseq_norm_lin_TF.csv")
+DE_DEseq_row <- corrected_data[DE_DEseq_norm$geneId, ]
+head(DE_DEseq_norm)
+colnames(DE_DEseq_norm)
+##Lin DE genes done by Brett
+linDE <- read.csv("20220614_DE_Linetal.csv", row.names = "X")
+
+### overlap with our data and Lin data
+
+DEseq_norm_all_lin <- read.csv("20220614_Overlap_with_Linetal.csv", row.names = "X")
+
+
+```
+
+##cluster differentially expressed genes using Coseq
+################################clustering ###Performed using
+`20220609_cluster_analysis.Rmd` ###reading data into this workbook
+
+```{r}
+
+
+DEseq_CLR_coseqtr_cluster <- readRDS('Data/rds_files/20220620_clusters_tr_data.rds')
+
+```
+
+
+
+###importing new GO terms and processing
+
+    #############Clusterprofile##########
+```{r}
+    Glycine_max_JGI_Wm82.a4.v1.cleaned <- read.delim("~/Documents/Projects/Soy_RNAseq/20210428_RNAseq/GO/Glycine_max_JGI_Wm82.a4.v1.cleaned.gaf")
+    colnames(Glycine_max_JGI_Wm82.a4.v1.cleaned) <- c("geneID", "GOID", "Category")
+
+    Glycine_max_JGI_Wm82.a4.v1.cleaned$geneID <- Glycine_max_JGI_Wm82.a4.v1.cleaned$geneID %>% str_replace(".Wm82.a4.v1", "")
+
+    Glycine_max_JGI_Wm82.a4.v1.cleaned$Category <- NULL
+    gene.go <- Glycine_max_JGI_Wm82.a4.v1.cleaned[which(Glycine_max_JGI_Wm82.a4.v1.cleaned$GOID != ""),] # take out genes without GO terms
+    gene2GO <- tapply(gene.go$GOID, gene.go$geneID, function(x)x)
+
+    saveRDS(gene2GO, 'Data/rds_files/20220620_gene2GO.rds')
+    head(gene2GO)
+```
+
+###function to perform enrichment for each cluster
+
+
+```{r}
+
+GO_enrichment <- function(count_table, cluster_table, cluterNum, p_cutoff=0.05, gene2GO, ontology = "BP"){
+cluster <- cluster_table %>% filter(cluster_table[,cluterNum] >= 0.90)
+cluster_2_rownames <- row.names(cluster)
+cluster2_List <- unlist(as.integer(row.names(count_table) %in% cluster_2_rownames))
+names(cluster2_List) <- row.names(count_table)
+print(table(cluster2_List))
+GOdata_cluster2 <- new("topGOdata",ontology = ontology,  allGenes = cluster2_List, geneSelectionFun = function(x)(x == 1), annot = annFUN.gene2GO, gene2GO = gene2GO, nodeSize = 2)
+resultKS_cluster2 <- runTest(GOdata_cluster2, algorithm = "elim", statistic = "fisher")
+
+tab_cluster2 <- GenTable(GOdata_cluster2, raw.p.value = resultKS_cluster2, topNodes = 100, numChar = 120)
+
+#remove special character from p.values in TopGO output.
+raw.p.value_formated <- as.numeric(gsub("< ", "", tab_cluster2$raw.p.value))
+tab_cluster2$adjusted.p.values <- p.adjust(raw.p.value_formated, method = "BH")
+
+tab_cluster2 <- tab_cluster2[, c(1, 2, 6,7)]
+tab_cluster2 <- tab_cluster2 %>% unite("GOterms", GO.ID:Term, remove = TRUE)
+new_colname <- as.character(paste("p.value_cluster",  as.character(cluterNum), sep = ""))
+print(new_colname)
+#names(tab_cluster2)[names(tab_cluster2) == "raw.p.value"] <- new_colname
+
+#tab_cluster2, <- tab_cluster2 %>% rename(new_colname = raw.p.value)
+
+return(tab_cluster2)
+
+}
+
+
+```
+
+###perform the GO enrichment BP
+
+```{r}
+##getting GO terms
+gene2GO <- readRDS('Data/rds_files/20220620_gene2GO.rds')
+
+##getting cluster table
+probapost <- read.csv("Data/tables/20220620_coseq_clustertable.cvs", row.names = "X")
+##create list of dataframes for the numbers of clusters
+
+
+```
+
+```{r}
+list_of_frames <- replicate(ncol(probapost), data.frame())
+# the use of for loop to perform go enrichment analysis for each cluster 
+for (i in 1: ncol(probapost))
+{print (i)
+  clusteri_GO <- GO_enrichment(DEseq_norm_all, probapost, i, p_cutoff=0.05, gene2GO, ontology = "BP")
+  # create a new data frame called new_dataframe
+  list_of_frames[[i]] <- clusteri_GO
+}
+
+
+combined_BPGO_long <- bind_rows(list_of_frames, .id="cluster")
+write.csv(combined_BPGO_long, "Data/tables/20230526_combined_BPGO_long.csv")
+
+```
+
+###MF 
+
+###perform the GO enrichment MF
+
+```{r}
+
+list_of_framesMF <- replicate(ncol(probapost), data.frame())
+
+
+# the use of for loop to perfom go enrichment analysis for each cluster 
+for (i in 1: ncol(probapost))
+{print (i)
+  clusteri_GO <- GO_enrichment(DEseq_norm_all, probapost, i, p_cutoff=0.05, gene2GO, ontology = "MF")
+  # create a new data frame called new_dataframe
+  list_of_framesMF[[i]] <- clusteri_GO
+}
+
+
+
+###combine dataframe in long format.
+
+combined_MFGO_long <- bind_rows(list_of_framesMF, .id="cluster")
+write.csv(combined_MFGO_long, "Data/tables/20230526_combined_MFGO_long.csv")
+```
+
+```{r}
+
+GO_cluster <- read.csv("GO/Data/tables/20230526_combined_BPGO_long.csv", stringsAsFactors=FALSE)
+
+
+GO_cluster$Description <- gsub("^.{0,11}", "", GO_cluster$GOterms)
+
+GO_cluster$cluster <- as.character(GO_cluster$cluster)
+GO_cluster$adjusted.p.values <- as.numeric(GO_cluster$adjusted.p.values)
+```
+
+##saving formated GO BP files for figure 2. 
+```{r}
+saveRDS(GO_cluster, 'Data/rds_files/20230526_GO_cluster.rds')
+```
